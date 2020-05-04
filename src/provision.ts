@@ -1,7 +1,6 @@
 import { IOTC_CONNECT } from "./types/constants";
-//@ts-ignore
-import CryptoJS from 'react-native-crypto-js'
-import base64 from 'base-64';
+import HmacSHA256 from 'crypto-js/hmac-sha256'
+import { stringify as base64stringify, parse as base64parse } from 'crypto-js/enc-base64';
 import utf8 from 'utf8';
 import { X509 } from "./types/interfaces";
 import { v4 as uuidv4 } from 'uuid'
@@ -141,6 +140,5 @@ export default class ProvisioningClient {
 }
 
 function computeKey(key: string, data: string): string {
-    const decodedKey = base64.decode(utf8.encode(key));
-    return base64.encode(CryptoJS.HmacSHA256.encrypt(data, decodedKey));
+    return base64stringify(HmacSHA256(data, base64parse(key)));
 }
