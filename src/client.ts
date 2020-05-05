@@ -74,7 +74,7 @@ export default class IoTCClient implements IIoTCClient {
         let topic = `devices/${this.id}/messages/events/`;
         if (properties) {
             Object.keys(properties).forEach((prop, index) => {
-                topic = `${topic}${encodeURI(prop)}=${encodeURI(properties[prop])}`
+                topic = `${topic}${encodeURIComponent(prop)}=${encodeURIComponent(properties[prop])}`
                 if (index < (properties.length - 1)) {
                     topic = `${topic}&`
                 }
@@ -102,7 +102,7 @@ export default class IoTCClient implements IIoTCClient {
         this.logger.log(`Connecting client...`);
         this.credentials = await this.deviceProvisioning.register(this.modelId);
         this.mqttClient = new MqttClient({
-            uri: `mqtts://${this.credentials.host}`,
+            uri: `wss://${this.credentials.host}:443/mqtt`,
             clientId: this.id,
             storage: myStorage
         });

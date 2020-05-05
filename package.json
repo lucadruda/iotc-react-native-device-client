@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "node_modules/.bin/tsc",
-    "clean": "rimraf -r dist"
+    "clean": "rimraf -r dist",
+    "prepublish": "npm run build"
   },
   "repository": {
     "type": "git",
@@ -26,7 +27,11 @@
   },
   "dependencies": {
     "crypto-js": "^3.3.0",
+    "react-native-get-random-values": "^1.4.0",
     "react-native-paho-mqtt": "^0.1.1",
     "uuid": "^8.0.0"
-  }
+  },
+  "files": [
+    "dist"
+  ]
 }

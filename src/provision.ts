@@ -1,10 +1,9 @@
 import { IOTC_CONNECT } from "./types/constants";
 import HmacSHA256 from 'crypto-js/hmac-sha256'
 import { stringify as base64stringify, parse as base64parse } from 'crypto-js/enc-base64';
-import utf8 from 'utf8';
 import { X509 } from "./types/interfaces";
+import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid'
-
 import { Client as MqttClient, Message } from 'react-native-paho-mqtt';
 
 const REGISTRATIONTOPIC = '$dps/registrations/res';
@@ -63,14 +62,14 @@ export default class ProvisioningClient {
 
         const clientId = registrationId;
         this.mqttUser = `${scopeId}/registrations/${registrationId}/api-version=2019-03-31`;
-        const resourceUri = encodeURI(`${scopeId}/registrations/${registrationId}`);
+        const resourceUri = encodeURIComponent(`${scopeId}/registrations/${registrationId}`);
         const expiry = Math.floor(Date.now() / 1000) + 21600; // 6 hours
-        const signature = encodeURI(computeKey(this.deviceKey, `${resourceUri}\n${expiry}`));
+        const signature = encodeURIComponent(computeKey(this.deviceKey, `${resourceUri}\n${expiry}`));
 
         this.requestId = uuidv4();
 
         this.mqttPassword = `SharedAccessSignature sr=${resourceUri}&sig=${signature}&se=${expiry}&skn=registration`;
-        this.mqttClient = new MqttClient({ uri: `mqtts://${this.endpoint}:8883`, clientId, storage: myStorage });
+        this.mqttClient = new MqttClient({ uri: `wss://${this.endpoint}:443/mqtt`, clientId, storage: myStorage });
     }
 
     private async onRegistrationResult(topic: string, message: string, resolve: any, reject: any): Promise<void> {
@@ -93,7 +92,7 @@ export default class ProvisioningClient {
                         const res = JSON.parse(message);
                         await this.mqttClient.disconnect();
                         const expiry = Math.floor(Date.now() / 1000) + 21600;
-                        const uri = encodeURI(`${res.registrationState.assignedHub}/devices/${this.registrationId}`);
+                        const uri = encodeURIComponent(`${res.registrationState.assignedHub}/devices/${this.registrationId}`);
                         const sig = computeKey(this.deviceKey, `${uri}\n${expiry}`);
                         resolve({
                             host: res.registrationState.assignedHub,
