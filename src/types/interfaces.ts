@@ -30,26 +30,25 @@ export interface IIoTCClient {
     /**
      * Disconnect device. Client cannot be reused after disconnect!!!
      */
-    disconnect(callback?: (err: Error, result: Result) => void): void,
+    disconnect(): Promise<void>,
     /**
      * Connect the device
      */
-    connect(callback?: (err: Error, result: Result) => void): void,
+    connect(): Promise<void>,
     /**
      * 
      * @param payload Message to send: can be any type (usually json) or a collection of messages
      * @param properties Properties to be added to the message (JSON format)
-     * @param [callback] Function to execute when message gets delivered
      * @returns void or Promise<Result>
      */
-    sendTelemetry(payload: any, properties?: any, callback?: (err?: Error) => void): Promise<void> | void,
+    sendTelemetry(payload: any, properties?: any): Promise<void>,
     /**
     * 
     * @param payload Property to send: can be any type (usually json) or a collection of properties
     * @param [callback] Function to execute when property gets set
     * @returns void or Promise<Result>
     */
-    sendProperty(payload: any, callback?: (err: Error) => void): Promise<void> | void,
+    sendProperty(payload: any): Promise<void>,
     /**
      * 
      * @param eventName name of the event to listen
@@ -66,5 +65,24 @@ export interface IIoTCClient {
 export interface IIoTCLogger {
     setLogLevel(logLevel: string | IOTC_LOGGING): void;
     log(message: string): void;
+}
+
+export interface IIoTCProperty {
+    name: string,
+    value: any,
+    version: number,
+    ack: () => Promise<void>
+}
+
+export enum IIoTCCommandResponse {
+    SUCCESS,
+    ERROR
+}
+
+export interface IIoTCCommand {
+    name: string,
+    requestPayload: any,
+    requestId: string,
+    reply: (status: IIoTCCommandResponse, message: string) => Promise<void>
 }
 

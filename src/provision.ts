@@ -62,22 +62,19 @@ export default class ProvisioningClient {
 
         const clientId = registrationId;
         this.mqttUser = `${scopeId}/registrations/${registrationId}/api-version=2019-03-31`;
-        const resourceUri = encodeURIComponent(`${scopeId}/registrations/${registrationId}`);
+        const resourceUri = `${scopeId}/registrations/${registrationId}`;
         const expiry = Math.floor(Date.now() / 1000) + 21600; // 6 hours
         const signature = encodeURIComponent(computeKey(this.deviceKey, `${resourceUri}\n${expiry}`));
-
-        this.requestId = uuidv4();
-
         this.mqttPassword = `SharedAccessSignature sr=${resourceUri}&sig=${signature}&se=${expiry}&skn=registration`;
+        this.requestId = uuidv4();
         this.mqttClient = new MqttClient({ uri: `wss://${this.endpoint}:443/mqtt`, clientId, storage: myStorage });
     }
 
     private async onRegistrationResult(topic: string, message: string, resolve: any, reject: any): Promise<void> {
-        const match = topic.match(/\$dps\/registrations\/res\/(\d+)\/\?\$rid=([\w\d\-]+)&retry-after=(\d)/);
+        const match = topic.match(/\$dps\/registrations\/res\/(\d+)\/\?\$rid=([\w\d\-]+)(&retry-after=(\d))?$/);
         if (match && match.length > 1) {
             const status = +match[1];
             const requestId = match[2];
-            const retry = match[3];
             if (requestId === this.requestId) {
                 switch (status) {
                     case 202:
@@ -93,7 +90,7 @@ export default class ProvisioningClient {
                         await this.mqttClient.disconnect();
                         const expiry = Math.floor(Date.now() / 1000) + 21600;
                         const uri = encodeURIComponent(`${res.registrationState.assignedHub}/devices/${this.registrationId}`);
-                        const sig = computeKey(this.deviceKey, `${uri}\n${expiry}`);
+                        const sig = encodeURIComponent(computeKey(this.deviceKey, `${uri}\n${expiry}`));
                         resolve({
                             host: res.registrationState.assignedHub,
                             password: `SharedAccessSignature sr=${uri}&sig=${sig}&se=${expiry}`
@@ -118,17 +115,19 @@ export default class ProvisioningClient {
             }
         }
         return new Promise<HubCredentials>(async (resolve, reject) => {
-            this.mqttClient.on('messageReceived', (message: Message) => {
+            this.subscriptions[REGISTRATIONTOPIC] = this.onRegistrationResult.bind(this);
+
+            const onMessageReceived = function (this: ProvisioningClient, message: Message) {
                 if (message.destinationName.startsWith(REGISTRATIONTOPIC)) {
                     this.subscriptions[REGISTRATIONTOPIC](message.destinationName, message.payloadString, resolve, reject);
                 }
-            });
+            }
+            this.mqttClient.on('messageReceived', onMessageReceived.bind(this));
             await this.mqttClient.connect({
                 userName: this.mqttUser,
                 password: this.mqttPassword
             });
             await this.mqttClient.subscribe(`${REGISTRATIONTOPIC}/#`);
-            this.subscriptions[REGISTRATIONTOPIC] = this.onRegistrationResult;
             let msg = new Message(JSON.stringify(payload));
             msg.destinationName = `$dps/registrations/PUT/iotdps-register/?$rid=${this.requestId}`
             await this.mqttClient.send(msg);
