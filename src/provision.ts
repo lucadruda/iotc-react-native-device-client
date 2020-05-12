@@ -110,7 +110,7 @@ export default class ProvisioningClient {
 
         };
         if (modelId) {
-            payload['data'] = {
+            payload['payload'] = {
                 iotcModelId: modelId
             }
         }
