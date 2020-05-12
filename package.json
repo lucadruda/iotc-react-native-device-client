@@ -32,6 +32,6 @@
     "uuid": "^8.0.0"
   },
   "files": [
-    "dist"
+    "dist","src"
   ]
 }
