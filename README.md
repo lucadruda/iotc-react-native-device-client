@@ -2,6 +2,8 @@
 
 This project provides a react-native compatible version of the IoTCentral device client. The client is Promise-based and written in Typescript.
 
+[![npm version](https://badge.fury.io/js/react-native-azure-iotcentral-client.svg)](https://badge.fury.io/js/react-native-azure-iotcentral-client)
+
 ## Getting Started
 
 Install the package and its dependency:
