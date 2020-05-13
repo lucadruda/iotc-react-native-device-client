@@ -110,7 +110,8 @@ export default class IoTCClient implements IIoTCClient {
         this.mqttClient = new MqttClient({
             uri: `wss://${this.credentials.host}:443/$iothub/websocket`,
             clientId: this.id,
-            storage: myStorage
+            storage: myStorage,
+            webSocket: WebSocket
         });
         this.mqttClient.on('connectionLost', async (responseObject) => {
             this.connected = false;

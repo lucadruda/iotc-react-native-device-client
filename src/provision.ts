@@ -70,7 +70,7 @@ export default class ProvisioningClient {
         const signature = encodeURIComponent(computeKey(this.deviceKey, `${resourceUri}\n${expiry}`));
         this.mqttPassword = `SharedAccessSignature sr=${resourceUri}&sig=${signature}&se=${expiry}&skn=registration`;
         this.requestId = uuidv4();
-        this.mqttClient = new MqttClient({ uri: `wss://${this.endpoint}:443/mqtt`, clientId, storage: myStorage });
+        this.mqttClient = new MqttClient({ uri: `wss://${this.endpoint}:443/mqtt`, clientId, storage: myStorage, webSocket: WebSocket });
         this.retry = 0;
         this.connected = false;
     }
