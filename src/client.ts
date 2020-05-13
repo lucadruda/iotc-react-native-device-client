@@ -5,7 +5,7 @@ import { IIoTCClient, X509, IIoTCLogger, Result, IIoTCProperty, IIoTCCommand, II
 import { IOTC_CONNECT, DPS_DEFAULT_ENDPOINT, IOTC_EVENTS, IOTC_CONNECTION_OK, IOTC_CONNECTION_ERROR, IOTC_LOGGING, DeviceTransport } from "./types/constants";
 import { ConsoleLogger } from "./consoleLogger";
 import ProvisioningClient, { HubCredentials } from "./provision";
-import { Client as MqttClient, Message } from 'react-native-paho-mqtt';
+import { Client as MqttClient, Message } from 'react-native-paho-mqtt-2';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid'
 

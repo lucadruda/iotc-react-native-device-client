@@ -28,7 +28,7 @@
   "dependencies": {
     "crypto-js": "^3.3.0",
     "react-native-get-random-values": "^1.4.0",
-    "react-native-paho-mqtt": "^0.1.1",
+    "react-native-paho-mqtt-2": "file:../react-native-paho-mqtt",
     "uuid": "^8.0.0"
   },
   "files": [

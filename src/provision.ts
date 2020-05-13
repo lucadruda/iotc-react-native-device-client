@@ -4,7 +4,7 @@ import { stringify as base64stringify, parse as base64parse } from 'crypto-js/en
 import { X509 } from "./types/interfaces";
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid'
-import { Client as MqttClient, Message } from 'react-native-paho-mqtt';
+import { Client as MqttClient, Message } from 'react-native-paho-mqtt-2';
 
 const REGISTRATIONTOPIC = '$dps/registrations/res';
 
