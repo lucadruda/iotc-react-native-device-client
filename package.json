@@ -14,7 +14,7 @@
     "url": "git+https://github.com/lucadruda/iotc-react-native-device-client.git"
   },
   "author": "Luca Druda",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/lucadruda/iotc-react-native-device-client/issues"
   },
