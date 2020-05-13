@@ -1,6 +1,6 @@
 {
   "name": "iotc-react-native-device-client",
-  "version": "1.0.4-beta.7",
+  "version": "1.0.4-beta.8",
   "description": "React-Native client for IoTCentral device",
   "main": "dist/index.js",
   "scripts": {
