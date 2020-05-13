@@ -4,7 +4,7 @@ import { stringify as base64stringify, parse as base64parse } from 'crypto-js/en
 import { X509 } from "./types/interfaces";
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid'
-import { Client as MqttClient, Message } from 'react-native-paho-mqtt-2';
+import { Client as MqttClient, Message } from 'react-native-paho-mqtt';
 
 const REGISTRATIONTOPIC = '$dps/registrations/res';
 
@@ -80,6 +80,7 @@ export default class ProvisioningClient {
         if (match && match.length > 1) {
             const status = +match[1];
             const requestId = match[2];
+            const retry = +match[4];
             if (requestId === this.requestId) {
                 switch (status) {
                     case 202:
@@ -87,7 +88,10 @@ export default class ProvisioningClient {
                         const operationId = JSON.parse(message).operationId;
                         const msg = new Message('');
                         msg.destinationName = `$dps/registrations/GET/iotdps-get-operationstatus/?$rid=${requestId}&operationId=${operationId}`
-                        await this.mqttClient.send(msg);
+                        await new Promise(r => setTimeout(async () => {
+                            await this.mqttClient.send(msg);
+                            r();
+                        }, (retry + 2) * 1000)); // add 2 seconds to retry to give more time
                         break;
                     case 200:
                         // get result
