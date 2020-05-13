@@ -202,6 +202,7 @@ export default class IoTCClient implements IIoTCClient {
         catch (ex) {
             // retry
             this.retry++;
+            await new Promise(r => setTimeout(r, 2000)); // give 2 seconds before retrying
             await this.clientConnect();
         }
         this.connected = true;
