@@ -55,14 +55,14 @@ setInterval(async() => {
                 field1: value1,
                 field2: value2,
                 field3: value3
-            }, properties, sendCallback)
+            }, properties)
 ```
 An optional *properties* object can be included in the send methods, to specify additional properties for the message (e.g. timestamp, content-type etc... ).
 Properties can be custom or part of the reserved ones (see list [here](https://github.com/Azure/azure-iot-sdk-csharp/blob/master/iothub/device/src/MessageSystemPropertyNames.cs#L36)).
 
 ### Send property update
 ```js
-await iotc.sendProperty({fieldName:'fieldValue'}, sendCallback);
+await iotc.sendProperty({fieldName:'fieldValue'});
 ```
 ### Listen to property updates
 
