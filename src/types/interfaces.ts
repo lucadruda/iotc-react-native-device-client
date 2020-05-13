@@ -64,7 +64,8 @@ export interface IIoTCClient {
 
 export interface IIoTCLogger {
     setLogLevel(logLevel: string | IOTC_LOGGING): void;
-    log(message: string): void;
+    log(message: string, tag?: string): void;
+    debug(message: string, tag?: string): void;
 }
 
 export interface IIoTCProperty {

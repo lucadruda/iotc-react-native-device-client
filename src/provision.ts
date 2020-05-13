@@ -35,6 +35,9 @@ export default class ProvisioningClient {
     private subscriptions: { [x: string]: (topic: string, message: string, resolve: any, reject: any) => void } = {};
     private requestId: string;
 
+    private retry: number;
+    private connected: boolean;
+
     static createKeyClient(endpoint: string, registrationId: string, scopeId: string, connType: IOTC_CONNECT, key: string) {
         if (connType != IOTC_CONNECT.SYMM_KEY && connType != IOTC_CONNECT.DEVICE_KEY) {
             throw new Error('Can\'t create a key client with a different credential method');
@@ -68,6 +71,8 @@ export default class ProvisioningClient {
         this.mqttPassword = `SharedAccessSignature sr=${resourceUri}&sig=${signature}&se=${expiry}&skn=registration`;
         this.requestId = uuidv4();
         this.mqttClient = new MqttClient({ uri: `wss://${this.endpoint}:443/mqtt`, clientId, storage: myStorage });
+        this.retry = 0;
+        this.connected = false;
     }
 
     private async onRegistrationResult(topic: string, message: string, resolve: any, reject: any): Promise<void> {
@@ -123,16 +128,35 @@ export default class ProvisioningClient {
                 }
             }
             this.mqttClient.on('messageReceived', onMessageReceived.bind(this));
-            await this.mqttClient.connect({
-                userName: this.mqttUser,
-                password: this.mqttPassword
-            });
+            await this.clientConnect();
             await this.mqttClient.subscribe(`${REGISTRATIONTOPIC}/#`);
             let msg = new Message(JSON.stringify(payload));
             msg.destinationName = `$dps/registrations/PUT/iotdps-register/?$rid=${this.requestId}`
             await this.mqttClient.send(msg);
         });
 
+    }
+
+    private async clientConnect() {
+        if (this.retry == 5) {
+            throw new Error('No connection after multiple retries');
+        }
+
+        if (!this.mqttClient || this.connected) {
+            return;
+        }
+        try {
+            await this.mqttClient.connect({
+                userName: this.mqttUser,
+                password: this.mqttPassword
+            });
+        }
+        catch (ex) {
+            // retry
+            this.retry++;
+            await this.clientConnect();
+        }
+        this.connected = true;
     }
 
 }

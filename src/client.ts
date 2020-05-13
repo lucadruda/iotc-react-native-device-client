@@ -45,6 +45,8 @@ export default class IoTCClient implements IIoTCClient {
     private mqttClient: MqttClient | undefined;
     private twin: any;
 
+    private retry: number;
+
     constructor(readonly id: string, readonly scopeId: string, readonly authenticationType: IOTC_CONNECT | string, readonly options: X509 | string, logger?: IIoTCLogger) {
         if (typeof (authenticationType) == 'string') {
             this.authenticationType = IOTC_CONNECT[authenticationType.toUpperCase() as keyof typeof IOTC_CONNECT];
@@ -57,6 +59,7 @@ export default class IoTCClient implements IIoTCClient {
         }
         this.deviceProvisioning = ProvisioningClient.createKeyClient(this.endpoint, id, scopeId, authenticationType as IOTC_CONNECT, options as string);
         this.events = {};
+        this.retry = 0;
     }
 
     setGlobalEndpoint(endpoint: string): void {
@@ -103,6 +106,7 @@ export default class IoTCClient implements IIoTCClient {
     async connect(): Promise<any> {
         this.logger.log(`Connecting client...`);
         this.credentials = await this.deviceProvisioning.register(this.modelId);
+        this.logger.debug(`Got credentials from DPS\n${JSON.stringify(this.credentials)}`);
         this.mqttClient = new MqttClient({
             uri: `wss://${this.credentials.host}:443/$iothub/websocket`,
             clientId: this.id,
@@ -111,8 +115,11 @@ export default class IoTCClient implements IIoTCClient {
         this.mqttClient.on('connectionLost', async (responseObject) => {
             this.connected = false;
             if (responseObject.errorCode !== 0) {
-                console.debug(responseObject.errorMessage);
+                this.logger.debug(responseObject.errorMessage);
             }
+            // restart retry
+            this.retry = 0;
+
             await this.clientConnect();
             await this.subscribe();
         });
@@ -178,13 +185,24 @@ export default class IoTCClient implements IIoTCClient {
     }
 
     private async clientConnect() {
+        if (this.retry == 5) {
+            throw new Error('No connection after multiple retries');
+        }
+
         if (!this.mqttClient || this.connected || !this.credentials) {
             return;
         }
-        await this.mqttClient.connect({
-            userName: `${this.credentials.host}/${this.id}/?api-version=2019-03-30`,
-            password: this.credentials.password
-        });
+        try {
+            await this.mqttClient.connect({
+                userName: `${this.credentials.host}/${this.id}/?api-version=2019-03-30`,
+                password: this.credentials.password
+            });
+        }
+        catch (ex) {
+            // retry
+            this.retry++;
+            await this.clientConnect();
+        }
         this.connected = true;
     }
 
