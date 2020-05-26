@@ -7,7 +7,7 @@ export type IoTCCredentials = {
     deviceId: string,
     modelId: string,
     patientId: string,
-    sasKey: string,
+    deviceKey: string,
     scopeId: string
 }
 
