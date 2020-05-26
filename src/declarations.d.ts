@@ -82,7 +82,12 @@ declare module 'react-native-paho-mqtt' {
             /**
              * array	If present, should contain a list of fully qualified WebSocket uris(e.g.ws://mqtt.eclipse.org:80/mqtt), that are tried in order in place of the host and port parameter of the construtor. The uris are tried one at a time in order until one of them succeeds. Do not use this in conjunction with hosts as the hosts array will be converted to uris and will overwrite this property.
              */
-            uris?: string[]
+            uris?: string[],
+            /**
+             * Set a custom delay before initiate the connection. This can be useful when running with websockets and need the socket to be fully ready.
+             * Number of seconds to wait before connect (default: 0)
+             */
+            delay?:number
         }): Promise<void>;
         subscribe(topic: string): Promise<void>;
         unsubscribe(topic: string): Promise<void>;
