@@ -4,7 +4,8 @@ declare module 'react-native-paho-mqtt' {
         constructor(config: {
             uri: string,
             clientId: string,
-            storage?: any
+            storage?: any,
+            webSocket?: typeof WebSocket
         });
 
         on(event: string, callback: (message: any) => void): void;

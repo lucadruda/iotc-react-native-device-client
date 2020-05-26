@@ -19,9 +19,15 @@ export class ConsoleLogger implements IIoTCLogger {
     constructor(private loggerLevel: IOTC_LOGGING = IOTC_LOGGING.DISABLED) {
 
     }
-    log(message: string): void {
+    debug(message: string, tag?: string): void {
+        if (this.loggerLevel === IOTC_LOGGING.ALL) {
+            console.log(`DEBUG${tag ? ` - ${tag.toUpperCase()}` : ''}: ${message}`);
+        }
+    }
+    log(message: string, tag?: string): void {
         if (this.loggerLevel != IOTC_LOGGING.DISABLED)
-            console.log(message);
+            console.log(`INFO${tag ? ` - ${tag.toUpperCase()}` : ''}: ${message}`);
+
     }
 
 }

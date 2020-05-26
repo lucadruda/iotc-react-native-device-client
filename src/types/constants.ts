@@ -18,9 +18,7 @@ export enum IOTC_LOGGING {
 
 export enum IOTC_CONNECT {
     SYMM_KEY = 1,
-    X509_CERT = 2,
-    DEVICE_KEY = 3,
-    CONN_STRING = 4
+    DEVICE_KEY = 3
 }
 
 
@@ -43,14 +41,6 @@ export enum IOTC_MESSAGE {
     ACCEPTED = 1,
     REJECTED = 2,
     ABANDONED = 4
-}
-
-
-export type HTTP_PROXY_OPTIONS = {
-    host_address: string,
-    port: number,
-    username: string,
-    password: string
 }
 
 export enum IOTC_EVENTS {
