@@ -196,7 +196,8 @@ export default class IoTCClient implements IIoTCClient {
         try {
             await this.mqttClient.connect({
                 userName: `${this.credentials.host}/${this.id}/?api-version=2019-03-30`,
-                password: this.credentials.password
+                password: this.credentials.password,
+                delay: 5
             });
         }
         catch (ex) {

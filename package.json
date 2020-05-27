@@ -1,6 +1,6 @@
 {
   "name": "react-native-azure-iotcentral-client",
-  "version": "1.0.0",
+  "version": "1.1.2",
   "description": "IoTCentral device client for React Native",
   "main": "dist/index.js",
   "scripts": {
@@ -28,9 +28,12 @@
   "dependencies": {
     "crypto-js": "^3.3.0",
     "react-native-get-random-values": "^1.4.0",
-    "react-native-paho-mqtt": "^0.1.1",
+    "react-native-paho-mqtt": "git+https://github.com/lucadruda/react-native-paho-mqtt.git",
     "uuid": "^8.0.0"
   },
+  "bundledDependencies": [
+    "react-native-paho-mqtt"
+  ],
   "files": [
     "dist",
     "src"
