@@ -138,7 +138,12 @@ export default class IoTCClient implements IIoTCClient {
         if (message.destinationName.startsWith(TOPIC_TWIN)) {
             // twin
             this.logger.log(`Received twin message: ${message.payloadString}`);
-            this.twin = JSON.parse(message.payloadString);
+            try {
+                this.twin = JSON.parse(message.payloadString);
+            }
+            catch (e) {
+                this.twin = null;
+            }
         }
         else if (message.destinationName.startsWith(TOPIC_PROPERTIES)) {
             // desired properties
@@ -234,19 +239,33 @@ export default class IoTCClient implements IIoTCClient {
                 return;
             }
             const propVersion = properties['$version'];
+            let value = properties[prop];
+            let wrapped = false;
+            const valueType = typeof properties[prop];
+            if (valueType !== 'string' && valueType !== 'number' && properties[prop].value) {
+                value = properties[prop].value;
+                wrapped = true;
+            }
             listener.callback({
                 name: prop,
-                value: properties[prop],
+                value,
                 version: propVersion,
                 ack: async function (this: IoTCClient, message?: string) {
-                    await this.sendProperty({
-                        [prop]: {
-                            statusCode: 200,
-                            status: message ? message : `Property applied`,
-                            desiredVersion: propVersion,
-                            value: properties[prop]
-                        }
-                    })
+                    if (wrapped) {
+                        await this.sendProperty({
+                            [prop]: {
+                                status: 'completed',
+                                message: message ? message : `Property applied`,
+                                desiredVersion: propVersion,
+                                value
+                            }
+                        });
+                    }
+                    else {
+                        await this.sendProperty({
+                            [prop]: value
+                        });
+                    }
                 }.bind(this)
             });
         });
