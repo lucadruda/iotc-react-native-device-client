@@ -103,7 +103,7 @@ export default class IoTCClient implements IIoTCClient {
         this.logger.log(`Disconnecting client...`);
     }
 
-    async connect(): Promise<any> {
+    async connect(cleanSession: boolean = true): Promise<any> {
         this.logger.log(`Connecting client...`);
         this.credentials = await this.deviceProvisioning.register(this.modelId);
         this.logger.debug(`Got credentials from DPS\n${JSON.stringify(this.credentials)}`);
@@ -111,7 +111,7 @@ export default class IoTCClient implements IIoTCClient {
             uri: `wss://${this.credentials.host}:443/$iothub/websocket`,
             clientId: this.id,
             storage: myStorage,
-            webSocket: WebSocket
+            webSocket: WebSocket,
         });
         this.mqttClient.on('connectionLost', async (responseObject) => {
             this.connected = false;
@@ -121,12 +121,12 @@ export default class IoTCClient implements IIoTCClient {
             // restart retry
             this.retry = 0;
 
-            await this.clientConnect();
+            await this.clientConnect(cleanSession);
             await this.subscribe();
         });
 
         this.mqttClient.on('messageReceived', this.onMessageReceived.bind(this));
-        await this.clientConnect();
+        await this.clientConnect(cleanSession);
         await this.subscribe();
         let twinMsg = new Message('');
         twinMsg.destinationName = `$iothub/twin/GET/?$rid=${uuidv4()}`;
@@ -190,7 +190,7 @@ export default class IoTCClient implements IIoTCClient {
         }
     }
 
-    private async clientConnect() {
+    private async clientConnect(cleanSession: boolean) {
         if (this.retry == 5) {
             throw new Error('No connection after multiple retries');
         }
@@ -202,16 +202,18 @@ export default class IoTCClient implements IIoTCClient {
             await this.mqttClient.connect({
                 userName: `${this.credentials.host}/${this.id}/?api-version=2019-03-30`,
                 password: this.credentials.password,
-                delay: 5
+                delay: 5,
+                cleanSession
             });
         }
         catch (ex) {
             // retry
             this.retry++;
             await new Promise(r => setTimeout(r, 2000)); // give 2 seconds before retrying
-            await this.clientConnect();
+            await this.clientConnect(cleanSession);
         }
         this.connected = true;
+        this.logger.debug('Reconnection: success');
     }
 
     private async subscribe() {
