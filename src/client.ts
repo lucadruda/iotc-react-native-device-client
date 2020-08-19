@@ -128,18 +128,27 @@ export default class IoTCClient implements IIoTCClient {
         this.mqttClient.on('messageReceived', this.onMessageReceived.bind(this));
         await this.clientConnect(cleanSession);
         await this.subscribe();
-        let twinMsg = new Message('');
-        twinMsg.destinationName = `$iothub/twin/GET/?$rid=${uuidv4()}`;
-        await this.mqttClient.send(twinMsg);
+        await this.fetchTwin();
 
     }
 
+    public async fetchTwin() {
+        if (this.mqttClient && this.connected) {
+            let twinMsg = new Message('');
+            twinMsg.destinationName = `$iothub/twin/GET/?$rid=${uuidv4()}`;
+            await this.mqttClient.send(twinMsg);
+        }
+    }
+
     private onMessageReceived(message: Message) {
-        if (message.destinationName.startsWith(TOPIC_TWIN)) {
+        if (message.destinationName.startsWith(`${TOPIC_TWIN}/200`)) {
             // twin
             this.logger.log(`Received twin message: ${message.payloadString}`);
             try {
                 this.twin = JSON.parse(message.payloadString);
+                if (this.twin.desired) {
+                    this.onPropertiesUpdated(this.twin.desired);
+                }
             }
             catch (e) {
                 this.twin = null;

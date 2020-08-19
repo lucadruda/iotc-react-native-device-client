@@ -34,7 +34,7 @@ export interface IIoTCClient {
     /**
      * Connect the device
      */
-    connect(cleanSession?:boolean): Promise<void>,
+    connect(cleanSession?: boolean): Promise<void>,
     /**
      * 
      * @param payload Message to send: can be any type (usually json) or a collection of messages
@@ -58,7 +58,9 @@ export interface IIoTCClient {
 
     setLogging(logLevel: string | IOTC_LOGGING): void,
 
-    isConnected(): boolean
+    isConnected(): boolean,
+
+    fetchTwin(): Promise<void>
 
 }
 
