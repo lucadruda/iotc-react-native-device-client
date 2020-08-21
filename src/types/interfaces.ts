@@ -54,7 +54,7 @@ export interface IIoTCClient {
      * @param eventName name of the event to listen
      * @param callback function to execute when event triggers
      */
-    on(eventName: string | IOTC_EVENTS, callback: (message: string) => void): void,
+    on(eventName: string | IOTC_EVENTS, callback: (data: IIoTCCommand | IIoTCProperty) => void): void,
 
     setLogging(logLevel: string | IOTC_LOGGING): void,
 
