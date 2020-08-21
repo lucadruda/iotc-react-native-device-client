@@ -48,7 +48,7 @@ export interface IIoTCClient {
     * @param [callback] Function to execute when property gets set
     * @returns void or Promise<Result>
     */
-    sendProperty(payload: IIoTCProperty): Promise<void>,
+    sendProperty(payload: any): Promise<void>,
     /**
      * 
      * @param eventName name of the event to listen
