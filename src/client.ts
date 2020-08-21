@@ -179,7 +179,7 @@ export default class IoTCClient implements IIoTCClient {
     }
 
 
-    on(eventName: string | IOTC_EVENTS, callback: (message: string | any) => void): void {
+    on(eventName: string | IOTC_EVENTS, callback: (message: IIoTCProperty | IIoTCCommand) => void): void {
         if (typeof (eventName) == 'number') {
             eventName = IOTC_EVENTS[eventName];
         }

@@ -54,7 +54,8 @@ export interface IIoTCClient {
      * @param eventName name of the event to listen
      * @param callback function to execute when event triggers
      */
-    on(eventName: string | IOTC_EVENTS, callback: (data: IIoTCCommand | IIoTCProperty) => void | Promise<void>): void,
+    on(eventName: IOTC_EVENTS.Properties | string, callback: (data: IIoTCProperty) => void | Promise<void>): void,
+    on(eventName: IOTC_EVENTS.Commands | string, callback: (data: IIoTCCommand) => void | Promise<void>): void,
 
     setLogging(logLevel: string | IOTC_LOGGING): void,
 
