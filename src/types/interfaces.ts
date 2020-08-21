@@ -48,13 +48,13 @@ export interface IIoTCClient {
     * @param [callback] Function to execute when property gets set
     * @returns void or Promise<Result>
     */
-    sendProperty(payload: any): Promise<void>,
+    sendProperty(payload: IIoTCProperty): Promise<void>,
     /**
      * 
      * @param eventName name of the event to listen
      * @param callback function to execute when event triggers
      */
-    on(eventName: string | IOTC_EVENTS, callback: (data: IIoTCCommand | IIoTCProperty) => void): void,
+    on(eventName: string | IOTC_EVENTS, callback: (data: IIoTCCommand | IIoTCProperty) => void | Promise<void>): void,
 
     setLogging(logLevel: string | IOTC_LOGGING): void,
 
