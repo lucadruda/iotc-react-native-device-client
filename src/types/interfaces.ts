@@ -15,6 +15,27 @@ export interface X509 {
     certPassword?: string
 }
 
+export interface IIoTCProperty {
+    name: string,
+    value: any,
+    version: number,
+    ack: () => Promise<void>
+}
+
+export enum IIoTCCommandResponse {
+    SUCCESS,
+    ERROR
+}
+
+export interface IIoTCCommand {
+    name: string,
+    requestPayload: any,
+    requestId: string,
+    reply: (status: IIoTCCommandResponse, message: string) => Promise<void>
+}
+export type PropertyCallback = (data: IIoTCProperty) => void | Promise<void>;
+export type CommandCallback = (data: IIoTCCommand) => void | Promise<void>;
+
 export interface IIoTCClient {
 
     /**
@@ -54,8 +75,8 @@ export interface IIoTCClient {
      * @param eventName name of the event to listen
      * @param callback function to execute when event triggers
      */
-    on(eventName: IOTC_EVENTS.Properties | string, callback: (data: IIoTCProperty) => void | Promise<void>): void,
-    on(eventName: IOTC_EVENTS.Commands | string, callback: (data: IIoTCCommand) => void | Promise<void>): void,
+    on(eventName: IOTC_EVENTS.Properties | string, callback: PropertyCallback): void,
+    on(eventName: IOTC_EVENTS.Commands | string, callback: CommandCallback): void,
 
     setLogging(logLevel: string | IOTC_LOGGING): void,
 
@@ -71,22 +92,5 @@ export interface IIoTCLogger {
     debug(message: string, tag?: string): void;
 }
 
-export interface IIoTCProperty {
-    name: string,
-    value: any,
-    version: number,
-    ack: () => Promise<void>
-}
 
-export enum IIoTCCommandResponse {
-    SUCCESS,
-    ERROR
-}
-
-export interface IIoTCCommand {
-    name: string,
-    requestPayload: any,
-    requestId: string,
-    reply: (status: IIoTCCommandResponse, message: string) => Promise<void>
-}
 

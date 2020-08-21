@@ -1,7 +1,7 @@
 // Copyright (c) Luca Druda. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { IIoTCClient, X509, IIoTCLogger, Result, IIoTCProperty, IIoTCCommand, IIoTCCommandResponse } from "./types/interfaces";
+import { IIoTCClient, X509, IIoTCLogger, Result, IIoTCProperty, IIoTCCommand, IIoTCCommandResponse, PropertyCallback, CommandCallback } from "./types/interfaces";
 import { IOTC_CONNECT, DPS_DEFAULT_ENDPOINT, IOTC_EVENTS, IOTC_CONNECTION_OK, IOTC_CONNECTION_ERROR, IOTC_LOGGING, DeviceTransport } from "./types/constants";
 import { ConsoleLogger } from "./consoleLogger";
 import ProvisioningClient, { HubCredentials } from "./provision";
@@ -32,7 +32,7 @@ export default class IoTCClient implements IIoTCClient {
 
     private events: {
         [s in IOTC_EVENTS]?: {
-            callback: (message: IIoTCProperty | IIoTCCommand) => void,
+            callback: PropertyCallback | CommandCallback,
             filter?: string
         }
     }
@@ -179,7 +179,7 @@ export default class IoTCClient implements IIoTCClient {
     }
 
 
-    on(eventName: string | IOTC_EVENTS, callback: (message: IIoTCProperty | IIoTCCommand) => void): void {
+    on(eventName: string | IOTC_EVENTS, callback: PropertyCallback | CommandCallback): void {
         if (typeof (eventName) == 'number') {
             eventName = IOTC_EVENTS[eventName];
         }
@@ -187,7 +187,7 @@ export default class IoTCClient implements IIoTCClient {
         const commands = eventName.match(/^Commands$|Commands\.([\S]+)/);
         if (properties) {
             this.events[IOTC_EVENTS.Properties] = {
-                callback,
+                callback: callback as PropertyCallback,
                 filter: properties[1] ? properties[1] : undefined
             }
         }
@@ -257,7 +257,7 @@ export default class IoTCClient implements IIoTCClient {
                 value = properties[prop].value;
                 wrapped = true;
             }
-            listener.callback({
+            (listener.callback as PropertyCallback)({
                 name: prop,
                 value,
                 version: propVersion,
@@ -291,7 +291,7 @@ export default class IoTCClient implements IIoTCClient {
             return;
         }
         // confirm reception first
-        listener.callback({
+        (listener.callback as CommandCallback)({
             name: command.name as string,
             requestPayload: command.requestPayload as any,
             requestId: command.requestId as string,
