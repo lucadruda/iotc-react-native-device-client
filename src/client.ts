@@ -100,13 +100,13 @@ export default class IoTCClient implements IIoTCClient {
     }
 
     async disconnect(): Promise<void> {
-        this.logger.log(`Disconnecting client...`);
+        await this.logger.log(`Disconnecting client...`);
     }
 
     async connect(cleanSession: boolean = true): Promise<any> {
-        this.logger.log(`Connecting client...`);
+        await this.logger.log(`Connecting client...`);
         this.credentials = await this.deviceProvisioning.register(this.modelId);
-        this.logger.debug(`Got credentials from DPS\n${JSON.stringify(this.credentials)}`);
+        await this.logger.debug(`Got credentials from DPS\n${JSON.stringify(this.credentials)}`);
         this.mqttClient = new MqttClient({
             uri: `wss://${this.credentials.host}:443/$iothub/websocket`,
             clientId: this.id,
@@ -116,7 +116,7 @@ export default class IoTCClient implements IIoTCClient {
         this.mqttClient.on('connectionLost', async (responseObject) => {
             this.connected = false;
             if (responseObject.errorCode !== 0) {
-                this.logger.debug(responseObject.errorMessage);
+                await this.logger.debug(responseObject.errorMessage);
             }
             // restart retry
             this.retry = 0;
@@ -140,10 +140,10 @@ export default class IoTCClient implements IIoTCClient {
         }
     }
 
-    private onMessageReceived(message: Message) {
+    private async onMessageReceived(message: Message) {
         if (message.destinationName.startsWith(`${TOPIC_TWIN}/200`)) {
             // twin
-            this.logger.log(`Received twin message: ${message.payloadString}`);
+            await this.logger.log(`Received twin message: ${message.payloadString}`);
             try {
                 this.twin = JSON.parse(message.payloadString);
                 if (this.twin.desired) {
@@ -156,13 +156,13 @@ export default class IoTCClient implements IIoTCClient {
         }
         else if (message.destinationName.startsWith(TOPIC_PROPERTIES)) {
             // desired properties
-            this.logger.log(`Received desired property message: ${message.payloadString}`);
+            await this.logger.log(`Received desired property message: ${message.payloadString}`);
             this.onPropertiesUpdated(JSON.parse(message.payloadString));
 
         }
         else if (message.destinationName.startsWith(TOPIC_COMMANDS)) {
             // commands
-            this.logger.log(`Received command message: ${message.payloadString}`);
+            await this.logger.log(`Received command message: ${message.payloadString}`);
             const match = message.destinationName.match(/\$iothub\/methods\/POST\/(.+)\/\?\$rid=(.+)/)
             if (match && match.length === 3) {
                 let cmd: Partial<IIoTCCommand> = {
@@ -222,7 +222,7 @@ export default class IoTCClient implements IIoTCClient {
             await this.clientConnect(cleanSession);
         }
         this.connected = true;
-        this.logger.debug('Reconnection: success');
+        await this.logger.debug('Reconnection: success');
     }
 
     private async subscribe() {
