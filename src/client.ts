@@ -1,7 +1,7 @@
 // Copyright (c) Luca Druda. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { IIoTCClient, X509, IIoTCLogger, Result, IIoTCProperty, IIoTCCommand, IIoTCCommandResponse, PropertyCallback, CommandCallback } from "./types/interfaces";
+import { IIoTCClient, X509, IIoTCLogger, Result, IIoTCProperty, IIoTCCommand, IIoTCCommandResponse, PropertyCallback, CommandCallback, FileRequestMetadata, FileResponseMetadata } from "./types/interfaces";
 import { IOTC_CONNECT, DPS_DEFAULT_ENDPOINT, IOTC_EVENTS, IOTC_CONNECTION_OK, IOTC_CONNECTION_ERROR, IOTC_LOGGING, DeviceTransport } from "./types/constants";
 import { ConsoleLogger } from "./consoleLogger";
 import ProvisioningClient, { HubCredentials } from "./provision";
@@ -23,6 +23,7 @@ const myStorage: any = {
 const TOPIC_TWIN = '$iothub/twin/res';
 const TOPIC_PROPERTIES = '$iothub/twin/PATCH/properties/desired'
 const TOPIC_COMMANDS = '$iothub/methods/POST';
+const HTTPS_API_VERSION = '2018-06-30';
 
 export default class IoTCClient implements IIoTCClient {
     isConnected(): boolean {
@@ -323,6 +324,55 @@ export default class IoTCClient implements IIoTCClient {
     public setLogging(logLevel: string | IOTC_LOGGING) {
         this.logger.setLogLevel(logLevel);
         this.logger.log(`Log level set to ${logLevel}`);
+    }
+
+    public async uploadFile(fileName: string, contentType: string, fileData: any): Promise<void> {
+        if (!this.mqttClient || !this.connected || !this.credentials) {
+            return;
+        }
+        let filereq: FileRequestMetadata;
+        //init upload
+        const res = await fetch(`https://${this.credentials.host}/devices/${this.id}/files?api-version=${HTTPS_API_VERSION}`, {
+            method: 'POST',
+            body: JSON.stringify({
+                blobName: fileName
+            }),
+            headers: {
+                Authorization: this.credentials.password,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (res && res.status >= 200 && res.status < 300) {
+            filereq = await res.json();
+            const uploadRes = await fetch(`https://${filereq.hostName}/${filereq.containerName}/${filereq.blobName}${filereq.sasToken}`, {
+                method: 'PUT',
+                headers: {
+                    'x-ms-version': '2015-02-21',
+                    'x-ms-date': new Date().toUTCString(),
+                    'Content-Type': contentType,
+                    'x-ms-blob-content-disposition': `attachment; filename="${fileName}"`,
+                    'x-ms-blob-type': 'BlockBlob'
+                },
+                body: fileData
+            });
+            if (uploadRes) {
+                const notif: FileResponseMetadata = {
+                    correlationId: filereq.correlationId,
+                    isSuccess: uploadRes.status >= 200 && uploadRes.status < 300,
+                    statusCode: uploadRes.status,
+                    statusDescription: uploadRes.statusText
+                };
+                // file has been created
+                await fetch(`https://${this.credentials.host}/devices/${this.id}/files/notifications?api-version=${HTTPS_API_VERSION}`, {
+                    method: 'POST',
+                    body: JSON.stringify(notif),
+                    headers: {
+                        Authorization: this.credentials.password,
+                        'Content-Type': 'application/json'
+                    }
+                });
+            }
+        }
     }
 
 

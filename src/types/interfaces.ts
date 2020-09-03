@@ -36,6 +36,20 @@ export interface IIoTCCommand {
 export type PropertyCallback = (data: IIoTCProperty) => void | Promise<void>;
 export type CommandCallback = (data: IIoTCCommand) => void | Promise<void>;
 
+export type FileRequestMetadata = {
+    correlationId: string,
+    hostName: string,
+    containerName: string,
+    blobName: string,
+    sasToken: string
+}
+export type FileResponseMetadata = {
+    correlationId: string,
+    isSuccess: boolean,
+    statusCode: number,
+    statusDescription: string
+}
+
 export interface IIoTCClient {
 
     /**
@@ -83,6 +97,8 @@ export interface IIoTCClient {
     isConnected(): boolean,
 
     fetchTwin(): Promise<void>
+
+    uploadFile(fileName: string, contentType: string, fileData: any): Promise<void>
 
 }
 
