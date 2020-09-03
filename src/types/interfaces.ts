@@ -96,9 +96,9 @@ export interface IIoTCClient {
 
     isConnected(): boolean,
 
-    fetchTwin(): Promise<void>
+    fetchTwin(): Promise<void>,
 
-    uploadFile(fileName: string, contentType: string, fileData: any): Promise<void>
+    uploadFile(fileName: string, contentType: string, fileData: any, encoding?: string): Promise<void>
 
 }
 

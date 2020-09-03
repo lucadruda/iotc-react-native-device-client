@@ -8,6 +8,7 @@ import ProvisioningClient, { HubCredentials } from "./provision";
 import { Client as MqttClient, Message } from 'react-native-paho-mqtt';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid'
+import { parse as base64parse } from 'crypto-js/enc-base64';
 
 
 const myStorage: any = {
@@ -326,7 +327,7 @@ export default class IoTCClient implements IIoTCClient {
         this.logger.log(`Log level set to ${logLevel}`);
     }
 
-    public async uploadFile(fileName: string, contentType: string, fileData: any): Promise<void> {
+    public async uploadFile(fileName: string, contentType: string, fileData: any, encoding?: string): Promise<void> {
         if (!this.mqttClient || !this.connected || !this.credentials) {
             return;
         }
@@ -344,6 +345,9 @@ export default class IoTCClient implements IIoTCClient {
         });
         if (res && res.status >= 200 && res.status < 300) {
             filereq = await res.json();
+            if (encoding && encoding === 'base64') {
+                fileData = base64parse(fileData);
+            }
             const uploadRes = await fetch(`https://${filereq.hostName}/${filereq.containerName}/${filereq.blobName}${filereq.sasToken}`, {
                 method: 'PUT',
                 headers: {
