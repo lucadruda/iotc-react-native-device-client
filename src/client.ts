@@ -9,6 +9,8 @@ import { Client as MqttClient, Message } from 'react-native-paho-mqtt';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid'
 import { parse as base64parse } from 'crypto-js/enc-base64';
+import CryptoJS from "crypto-js";
+import { CryptJsWordArrayToUint8Array } from "./utils";
 
 
 const myStorage: any = {
@@ -346,7 +348,7 @@ export default class IoTCClient implements IIoTCClient {
         if (res && res.status >= 200 && res.status < 300) {
             filereq = await res.json();
             if (encoding && encoding === 'base64') {
-                fileData = base64parse(fileData);
+                fileData = CryptJsWordArrayToUint8Array(base64parse.bind(CryptoJS.enc.Base64)(fileData));
             }
             const uploadRes = await fetch(`https://${filereq.hostName}/${filereq.containerName}/${filereq.blobName}${filereq.sasToken}`, {
                 method: 'PUT',
@@ -354,10 +356,11 @@ export default class IoTCClient implements IIoTCClient {
                     'x-ms-version': '2015-02-21',
                     'x-ms-date': new Date().toUTCString(),
                     'Content-Type': contentType,
+                    'Content-Length': `${fileData.length}`,
                     'x-ms-blob-content-disposition': `attachment; filename="${fileName}"`,
                     'x-ms-blob-type': 'BlockBlob'
                 },
-                body: fileData
+                body: fileData.buffer
             });
             if (uploadRes) {
                 const notif: FileResponseMetadata = {
