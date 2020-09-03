@@ -329,9 +329,9 @@ export default class IoTCClient implements IIoTCClient {
         this.logger.log(`Log level set to ${logLevel}`);
     }
 
-    public async uploadFile(fileName: string, contentType: string, fileData: any, encoding?: string): Promise<void> {
+    public async uploadFile(fileName: string, contentType: string, fileData: any, encoding?: string): Promise<number> {
         if (!this.mqttClient || !this.connected || !this.credentials) {
-            return;
+            return -1;
         }
         let filereq: FileRequestMetadata;
         //init upload
@@ -378,8 +378,10 @@ export default class IoTCClient implements IIoTCClient {
                         'Content-Type': 'application/json'
                     }
                 });
+                return uploadRes.status;
             }
         }
+        return -1;
     }
 
 

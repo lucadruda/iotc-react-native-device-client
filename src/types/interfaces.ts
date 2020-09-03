@@ -98,7 +98,7 @@ export interface IIoTCClient {
 
     fetchTwin(): Promise<void>,
 
-    uploadFile(fileName: string, contentType: string, fileData: any, encoding?: string): Promise<void>
+    uploadFile(fileName: string, contentType: string, fileData: any, encoding?: string): Promise<number>
 
 }
 
