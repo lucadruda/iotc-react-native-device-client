@@ -12,8 +12,8 @@ export type IoTCCredentials = {
     scopeId: string
 }
 
-export function DecryptCredentials(value: string, pass: string): IoTCCredentials {
-    const decrypted = AES.decrypt(value, pass);
+export function DecryptCredentials(value: string, pass?: string): IoTCCredentials {
+    const decrypted = pass ? AES.decrypt(value, pass) : value;
     const words = base64parse(decrypted.toString(Utf8));
     return JSON.parse(Utf8.stringify(words));
 }
