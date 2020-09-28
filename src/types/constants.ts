@@ -56,3 +56,11 @@ export enum DeviceTransport {
     MQTT_WS,
     AMQP_WS
 }
+
+export class CancellationException implements Error {
+    public name: string;
+
+    constructor(public message: string) {
+        this.name = 'Cancel'
+    }
+}

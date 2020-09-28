@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { IIoTCClient, X509, IIoTCLogger, Result, IIoTCProperty, IIoTCCommand, IIoTCCommandResponse, PropertyCallback, CommandCallback, FileRequestMetadata, FileResponseMetadata } from "./types/interfaces";
-import { IOTC_CONNECT, DPS_DEFAULT_ENDPOINT, IOTC_EVENTS, IOTC_CONNECTION_OK, IOTC_CONNECTION_ERROR, IOTC_LOGGING, DeviceTransport } from "./types/constants";
+import { IOTC_CONNECT, DPS_DEFAULT_ENDPOINT, IOTC_EVENTS, IOTC_CONNECTION_OK, IOTC_CONNECTION_ERROR, IOTC_LOGGING, DeviceTransport, CancellationException } from "./types/constants";
 import { ConsoleLogger } from "./consoleLogger";
 import ProvisioningClient, { HubCredentials } from "./provision";
 import { Client as MqttClient, Message } from 'react-native-paho-mqtt';
@@ -114,6 +114,7 @@ export default class IoTCClient implements IIoTCClient {
             (config.request as any).cancel = () => {
                 this.mqttClient?.disconnect();
                 this.mqttClient = undefined;
+                throw (new CancellationException('Connection aborted'));
             }
         }
         await this.logger.log(`Connecting client...`);
