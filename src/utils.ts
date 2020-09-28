@@ -55,3 +55,24 @@ export function CryptJsWordArrayToUint8Array(wordArray: any) {
     }
     return result;
 }
+
+export async function promiseTimeout<T>(fn: (...args: any[]) => Promise<T>, ms: number): Promise<T> {
+    let id: number;
+    let timeout = new Promise<T>((resolve, reject) => {
+        id = setTimeout(() => {
+            reject('Timed out in ' + ms + 'ms.')
+        }, ms)
+    })
+
+    return Promise.race([
+        fn(),
+        timeout
+    ]).then((result: T) => {
+        clearTimeout(id)
+
+        /**
+         * ... we also need to pass the result back
+         */
+        return Promise.resolve(result)
+    })
+}

@@ -10,7 +10,7 @@ import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid'
 import { parse as base64parse } from 'crypto-js/enc-base64';
 import CryptoJS from "crypto-js";
-import { CryptJsWordArrayToUint8Array } from "./utils";
+import { CryptJsWordArrayToUint8Array, promiseTimeout } from "./utils";
 
 
 const myStorage: any = {
@@ -105,11 +105,19 @@ export default class IoTCClient implements IIoTCClient {
 
     async disconnect(): Promise<void> {
         await this.logger.log(`Disconnecting client...`);
+        await this.mqttClient?.disconnect();
     }
 
-    async connect(cleanSession: boolean = true): Promise<any> {
+    async connect(opts: { cleanSession?: boolean, timeout?: number, request?: Object }): Promise<any> {
+        const config = { ...{ cleanSession: false, timeout: 30 }, ...opts };
+        if (config.request) {
+            (config.request as any).cancel = () => {
+                this.mqttClient?.disconnect();
+                this.mqttClient = undefined;
+            }
+        }
         await this.logger.log(`Connecting client...`);
-        this.credentials = await this.deviceProvisioning.register(this.modelId);
+        this.credentials = await promiseTimeout(this.deviceProvisioning.register.bind(this, this.modelId), config.timeout * 1000);
         await this.logger.debug(`Got credentials from DPS\n${JSON.stringify(this.credentials)}`);
         this.mqttClient = new MqttClient({
             uri: `wss://${this.credentials.host}:443/$iothub/websocket`,
@@ -117,6 +125,7 @@ export default class IoTCClient implements IIoTCClient {
             storage: myStorage,
             webSocket: WebSocket,
         });
+
         this.mqttClient.on('connectionLost', async (responseObject) => {
             this.connected = false;
             if (responseObject.errorCode !== 0) {
@@ -125,15 +134,14 @@ export default class IoTCClient implements IIoTCClient {
             // restart retry
             this.retry = 0;
 
-            await this.clientConnect(cleanSession);
+            await promiseTimeout(this.clientConnect.bind(this, config), config.timeout * 1000);
             await this.subscribe();
         });
 
         this.mqttClient.on('messageReceived', this.onMessageReceived.bind(this));
-        await this.clientConnect(cleanSession);
+        await promiseTimeout(this.clientConnect.bind(this, config), config.timeout * 1000);
         await this.subscribe();
         await this.fetchTwin();
-
     }
 
     public async fetchTwin() {
@@ -147,7 +155,7 @@ export default class IoTCClient implements IIoTCClient {
     private async onMessageReceived(message: Message) {
         if (message.destinationName.startsWith(`${TOPIC_TWIN}/200`)) {
             // twin
-            await this.logger.log(`Received twin message: ${message.payloadString}`);
+            await this.logger.debug(`Received twin message: ${message.payloadString}`);
             try {
                 this.twin = JSON.parse(message.payloadString);
                 if (this.twin.desired) {
@@ -203,7 +211,8 @@ export default class IoTCClient implements IIoTCClient {
         }
     }
 
-    private async clientConnect(cleanSession: boolean) {
+    private async clientConnect(config: { cleanSession: boolean, timeout: number }) {
+        const { cleanSession, timeout } = config;
         if (this.retry == 5) {
             throw new Error('No connection after multiple retries');
         }
@@ -216,14 +225,15 @@ export default class IoTCClient implements IIoTCClient {
                 userName: `${this.credentials.host}/${this.id}/?api-version=2019-03-30`,
                 password: this.credentials.password,
                 delay: 5,
-                cleanSession
+                cleanSession,
+                timeout: timeout * 1000
             });
         }
         catch (ex) {
             // retry
             this.retry++;
             await new Promise(r => setTimeout(r, 2000)); // give 2 seconds before retrying
-            await this.clientConnect(cleanSession);
+            await this.clientConnect(config);
         }
         this.connected = true;
         await this.logger.debug('Reconnection: success');
@@ -269,9 +279,9 @@ export default class IoTCClient implements IIoTCClient {
                     if (wrapped) {
                         await this.sendProperty({
                             [prop]: {
-                                status: 'completed',
-                                message: message ? message : `Property applied`,
-                                desiredVersion: propVersion,
+                                ac: 200,
+                                ad: message ? message : `Property applied`,
+                                av: propVersion,
                                 value
                             }
                         });
