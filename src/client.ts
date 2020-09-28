@@ -110,15 +110,22 @@ export default class IoTCClient implements IIoTCClient {
 
     async connect(opts: { cleanSession?: boolean, timeout?: number, request?: Object }): Promise<any> {
         const config = { ...{ cleanSession: false, timeout: 30 }, ...opts };
+        let cancel = false;
         if (config.request) {
-            (config.request as any).cancel = () => {
+            (config.request as any).cancel = function (this: IoTCClient) {
                 this.mqttClient?.disconnect();
                 this.mqttClient = undefined;
-                throw (new CancellationException('Connection aborted'));
-            }
+                cancel = false;
+            }.bind(this);
         }
         await this.logger.log(`Connecting client...`);
+        if (cancel) {
+            throw (new CancellationException('Connection aborted'));
+        }
         this.credentials = await promiseTimeout(this.deviceProvisioning.register.bind(this, this.modelId), config.timeout * 1000);
+        if (cancel) {
+            throw (new CancellationException('Connection aborted'));
+        }
         await this.logger.debug(`Got credentials from DPS\n${JSON.stringify(this.credentials)}`);
         this.mqttClient = new MqttClient({
             uri: `wss://${this.credentials.host}:443/$iothub/websocket`,
@@ -141,8 +148,14 @@ export default class IoTCClient implements IIoTCClient {
 
         this.mqttClient.on('messageReceived', this.onMessageReceived.bind(this));
         await promiseTimeout(this.clientConnect.bind(this, config), config.timeout * 1000);
+        if (cancel) {
+            throw (new CancellationException('Connection aborted'));
+        }
         await this.subscribe();
         await this.fetchTwin();
+        if (cancel) {
+            throw (new CancellationException('Connection aborted'));
+        }
     }
 
     public async fetchTwin() {
