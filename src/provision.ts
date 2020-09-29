@@ -96,6 +96,9 @@ export default class ProvisioningClient {
                         // get result
                         const res = JSON.parse(message);
                         await this.mqttClient.disconnect();
+                        if (res.status === 'failed') {
+                            reject(message);
+                        }
                         resolve(generateHubCredentials(res.registrationState.assignedHub, this.registrationId, this.deviceKey));
                         break;
                     default:

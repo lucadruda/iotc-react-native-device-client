@@ -103,9 +103,13 @@ export default class IoTCClient implements IIoTCClient {
         return this.mqttClient.send(msg);
     }
 
-    async disconnect(): Promise<void> {
+    async disconnect(force: boolean = false): Promise<void> {
         await this.logger.log(`Disconnecting client...`);
         await this.mqttClient?.disconnect();
+        if (force) {
+            delete this.mqttClient;
+            this.mqttClient = undefined;
+        }
     }
 
     async connect(opts: { cleanSession?: boolean, timeout?: number, request?: Object }): Promise<any> {
@@ -122,7 +126,7 @@ export default class IoTCClient implements IIoTCClient {
         if (cancel) {
             throw (new CancellationException('Connection aborted'));
         }
-        this.credentials = await promiseTimeout(this.deviceProvisioning.register.bind(this, this.modelId), config.timeout * 1000);
+        this.credentials = await promiseTimeout(this.deviceProvisioning.register.bind(this.deviceProvisioning, this.modelId), config.timeout * 1000);
         if (cancel) {
             throw (new CancellationException('Connection aborted'));
         }
