@@ -65,7 +65,7 @@ export interface IIoTCClient {
     /**
      * Disconnect device. Client cannot be reused after disconnect!!!
      */
-    disconnect(force: boolean): Promise<void>,
+    disconnect(): Promise<void>,
     /**
      * Connect the device
      */

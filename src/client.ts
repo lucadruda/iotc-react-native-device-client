@@ -103,13 +103,12 @@ export default class IoTCClient implements IIoTCClient {
         return this.mqttClient.send(msg);
     }
 
-    async disconnect(force: boolean = false): Promise<void> {
+    async disconnect(): Promise<void> {
         await this.logger.log(`Disconnecting client...`);
         await this.mqttClient?.disconnect();
-        if (force) {
-            delete this.mqttClient;
-            this.mqttClient = undefined;
-        }
+        delete this.mqttClient;
+        this.mqttClient = undefined;
+        this.connected = false;
     }
 
     async connect(opts: { cleanSession?: boolean, timeout?: number, request?: Object }): Promise<any> {
