@@ -120,14 +120,11 @@ export default class IoTCClient implements IIoTCClient {
     async connect(opts: { cleanSession?: boolean, timeout?: number, cancellationToken?: CancellationToken }): Promise<any> {
         const config = { ...{ cleanSession: false, timeout: 30 }, ...opts };
         await this.logger.log(`Connecting client...`);
-        if (config.cancellationToken && config.cancellationToken.isCancellationRequested) {
-            throw (new CancellationException('Connection aborted'));
-        }
+        config.cancellationToken?.throwIfCancelled('Start connection');
 
         this.credentials = await promiseTimeout(this.deviceProvisioning.register.bind(this.deviceProvisioning, this.modelId), config.timeout * 1000);
-        if (config.cancellationToken && config.cancellationToken.isCancellationRequested) {
-            throw (new CancellationException('Connection aborted'));
-        }
+        config.cancellationToken?.throwIfCancelled('Provisioning');
+
         await this.logger.debug(`Got credentials from DPS\n${JSON.stringify(this.credentials)}`);
         this.mqttClient = new MqttClient({
             uri: `wss://${this.credentials.host}:443/$iothub/websocket`,
@@ -135,9 +132,7 @@ export default class IoTCClient implements IIoTCClient {
             storage: myStorage,
             webSocket: WebSocket,
         });
-        if (config.cancellationToken && config.cancellationToken.isCancellationRequested) {
-            throw (new CancellationException('Connection aborted'));
-        }
+        config.cancellationToken?.throwIfCancelled('Hub client init');
         this.mqttClient.on('connectionLost', async (responseObject) => {
             if (this.receivedDisconnession) { // if disconnect was called from outside, don't try reconnection
                 return;
@@ -154,21 +149,13 @@ export default class IoTCClient implements IIoTCClient {
         });
 
         this.mqttClient.on('messageReceived', this.onMessageReceived.bind(this));
-        if (config.cancellationToken && config.cancellationToken.isCancellationRequested) {
-            throw (new CancellationException('Connection aborted'));
-        }
+        config.cancellationToken?.throwIfCancelled('Connection callbacks applied');
         await promiseTimeout(this.clientConnect.bind(this, config), config.timeout * 1000);
-        if (config.cancellationToken && config.cancellationToken.isCancellationRequested) {
-            throw (new CancellationException('Connection aborted'));
-        }
+        config.cancellationToken?.throwIfCancelled('Hub connection completed');
         await this.subscribe();
-        if (config.cancellationToken && config.cancellationToken.isCancellationRequested) {
-            throw (new CancellationException('Connection aborted'));
-        }
+        config.cancellationToken?.throwIfCancelled('Hub topic subscriptions');
         await this.fetchTwin();
-        if (config.cancellationToken && config.cancellationToken.isCancellationRequested) {
-            throw (new CancellationException('Connection aborted'));
-        }
+        config.cancellationToken?.throwIfCancelled('Fetch Twin');
     }
 
     public async fetchTwin() {

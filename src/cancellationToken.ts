@@ -1,20 +1,28 @@
+import { CancellationException } from ".";
+
 type AnyFn = (...args: any) => any | Promise<any>;
 
 export default class CancellationToken {
 
-    public isCancellationRequested: boolean;
-    private onCancelledCallbacks: AnyFn[];
-    public promise: Promise<any>;
-
-
+    private cancelled: boolean;
     constructor() {
-        this.isCancellationRequested = false;
-        this.onCancelledCallbacks = []; // actions to execute when cancelled
-        this.onCancelledCallbacks.push(() => this.isCancellationRequested = true);
-        // expose a promise to the outside
-        this.promise = new Promise(resolve => this.onCancelledCallbacks.push(resolve));
-        // let the user add handlers
+        this.cancelled = false;
     }
-    public cancel() { this.onCancelledCallbacks.forEach(x => x); }
-    public onCancelled(fn: AnyFn) { this.onCancelledCallbacks.push(fn) }
+
+    throwIfCancelled(lastCompletedStep?: string) {
+        if (this.isCancelled()) {
+            throw new CancellationException(`Connection aborted${lastCompletedStep ? `: ${lastCompletedStep}.` : '.'}`);
+        }
+    }
+
+    isCancelled() {
+        return this.cancelled === true;
+    }
+
+    cancel() {
+        this.cancelled = true;
+    }
+
+    // could probably do with a `register(func)` method too for cancellation callbacks
+
 }
