@@ -1,6 +1,6 @@
 {
   "name": "react-native-azure-iotcentral-client",
-  "version": "1.1.4-b.15",
+  "version": "1.1.4-b.16",
   "description": "IoTCentral device client for React Native",
   "main": "dist/index.js",
   "scripts": {
