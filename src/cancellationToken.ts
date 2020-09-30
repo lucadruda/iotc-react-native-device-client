@@ -1,6 +1,6 @@
 type AnyFn = (...args: any) => any | Promise<any>;
 
-export class CancellationToken {
+export default class CancellationToken {
 
     public isCancellationRequested: boolean;
     private onCancelledCallbacks: AnyFn[];

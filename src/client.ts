@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { parse as base64parse } from 'crypto-js/enc-base64';
 import CryptoJS from "crypto-js";
 import { CryptJsWordArrayToUint8Array, promiseTimeout } from "./utils";
-import { CancellationToken } from "./cancellationToken";
+import CancellationToken from "./cancellationToken";
 
 
 const myStorage: any = {
