@@ -1,7 +1,7 @@
 // Copyright (c) Luca Druda. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { IIoTCClient, X509, IIoTCLogger, Result, IIoTCProperty, IIoTCCommand, IIoTCCommandResponse, PropertyCallback, CommandCallback, FileRequestMetadata, FileResponseMetadata } from "./types/interfaces";
+import { IIoTCClient, X509, IIoTCLogger, Result, IIoTCProperty, IIoTCCommand, IIoTCCommandResponse, PropertyCallback, CommandCallback, FileRequestMetadata, FileResponseMetadata, FileUploadResult } from "./types/interfaces";
 import { IOTC_CONNECT, DPS_DEFAULT_ENDPOINT, IOTC_EVENTS, IOTC_CONNECTION_OK, IOTC_CONNECTION_ERROR, IOTC_LOGGING, DeviceTransport, CancellationException } from "./types/constants";
 import { ConsoleLogger } from "./consoleLogger";
 import ProvisioningClient, { HubCredentials } from "./provision";
@@ -353,9 +353,9 @@ export default class IoTCClient implements IIoTCClient {
         this.logger.log(`Log level set to ${logLevel}`);
     }
 
-    public async uploadFile(fileName: string, contentType: string, fileData: any, encoding?: string): Promise<number> {
+    public async uploadFile(fileName: string, contentType: string, fileData: any, encoding?: string): Promise<FileUploadResult> {
         if (!this.mqttClient || !this.connected || !this.credentials) {
-            return -1;
+            return { status: -1, errorMessage: 'Client is not connected!' };
         }
         let filereq: FileRequestMetadata;
         //init upload
@@ -402,10 +402,10 @@ export default class IoTCClient implements IIoTCClient {
                         'Content-Type': 'application/json'
                     }
                 });
-                return uploadRes.status;
+                return { status: uploadRes.status, errorMessage: (uploadRes.status >= 200 && uploadRes.status < 300) ? undefined : await uploadRes.text() };
             }
         }
-        return -1;
+        return { status: res.status, errorMessage: await res.text() };
     }
 
 

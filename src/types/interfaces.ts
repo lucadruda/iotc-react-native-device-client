@@ -50,6 +50,10 @@ export type FileResponseMetadata = {
     statusDescription: string
 }
 
+export type FileUploadResult = {
+    status: number,
+    errorMessage?: string
+}
 export interface IIoTCClient {
 
     /**
@@ -98,7 +102,7 @@ export interface IIoTCClient {
 
     fetchTwin(): Promise<void>,
 
-    uploadFile(fileName: string, contentType: string, fileData: any, encoding?: string): Promise<number>
+    uploadFile(fileName: string, contentType: string, fileData: any, encoding?: string): Promise<FileUploadResult>
 
 }
 
