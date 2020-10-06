@@ -110,7 +110,7 @@ A device can send custom data during provision process: if a device is aware of 
 
 ### How to set IoTC template ID in your device
 Template Id can be found in the device explorer page of IoTCentral
-![Img](https://github.com/lucadruda/iotc-react-native-device-client/assets/modelId.jpg)
+![Img](https://github.com/lucadruda/iotc-react-native-device-client/raw/master/assets/modelId.jpg)
 
 Then call this method before connect():
 
