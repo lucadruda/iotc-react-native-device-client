@@ -1,10 +1,9 @@
 import { IOTC_CONNECT } from "./types/constants";
-import HmacSHA256 from 'crypto-js/hmac-sha256'
-import { stringify as base64stringify, parse as base64parse } from 'crypto-js/enc-base64';
 import { X509 } from "./types/interfaces";
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid'
 import { Client as MqttClient, Message } from 'react-native-paho-mqtt';
+import { generateHubCredentials, computeKey } from "./utils";
 
 const REGISTRATIONTOPIC = '$dps/registrations/res';
 
@@ -97,13 +96,10 @@ export default class ProvisioningClient {
                         // get result
                         const res = JSON.parse(message);
                         await this.mqttClient.disconnect();
-                        const expiry = Math.floor(Date.now() / 1000) + 21600;
-                        const uri = encodeURIComponent(`${res.registrationState.assignedHub}/devices/${this.registrationId}`);
-                        const sig = encodeURIComponent(computeKey(this.deviceKey, `${uri}\n${expiry}`));
-                        resolve({
-                            host: res.registrationState.assignedHub,
-                            password: `SharedAccessSignature sr=${uri}&sig=${sig}&se=${expiry}`
-                        });
+                        if (res.status === 'failed') {
+                            reject(message);
+                        }
+                        resolve(generateHubCredentials(res.registrationState.assignedHub, this.registrationId, this.deviceKey));
                         break;
                     default:
                         reject(message);
@@ -132,11 +128,16 @@ export default class ProvisioningClient {
                 }
             }
             this.mqttClient.on('messageReceived', onMessageReceived.bind(this));
-            await this.clientConnect();
-            await this.mqttClient.subscribe(`${REGISTRATIONTOPIC}/#`);
-            let msg = new Message(JSON.stringify(payload));
-            msg.destinationName = `$dps/registrations/PUT/iotdps-register/?$rid=${this.requestId}`
-            await this.mqttClient.send(msg);
+            try {
+                await this.clientConnect();
+                await this.mqttClient.subscribe(`${REGISTRATIONTOPIC}/#`);
+                let msg = new Message(JSON.stringify(payload));
+                msg.destinationName = `$dps/registrations/PUT/iotdps-register/?$rid=${this.requestId}`
+                await this.mqttClient.send(msg);
+            }
+            catch (ex) {
+                reject(ex);
+            }
         });
 
     }
@@ -163,8 +164,4 @@ export default class ProvisioningClient {
         this.connected = true;
     }
 
-}
-
-function computeKey(key: string, data: string): string {
-    return base64stringify(HmacSHA256(data, base64parse(key)));
 }

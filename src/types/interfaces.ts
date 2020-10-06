@@ -30,14 +30,33 @@ export enum IIoTCCommandResponse {
 export interface IIoTCCommand {
     name: string,
     requestPayload: any,
-    requestId: string,
+    requestId?: string,
     reply: (status: IIoTCCommandResponse, message: string) => Promise<void>
 }
 export type PropertyCallback = (data: IIoTCProperty) => void | Promise<void>;
 export type CommandCallback = (data: IIoTCCommand) => void | Promise<void>;
 
+export type FileRequestMetadata = {
+    correlationId: string,
+    hostName: string,
+    containerName: string,
+    blobName: string,
+    sasToken: string
+}
+export type FileResponseMetadata = {
+    correlationId: string,
+    isSuccess: boolean,
+    statusCode: number,
+    statusDescription: string
+}
+
+export type FileUploadResult = {
+    status: number,
+    errorMessage?: string
+}
 export interface IIoTCClient {
 
+    readonly id: string,
     /**
      * 
      * @param modelId IoT Central model Id for automatic approval process
@@ -55,7 +74,7 @@ export interface IIoTCClient {
     /**
      * Connect the device
      */
-    connect(cleanSession?: boolean): Promise<void>,
+    connect(config?: { cleanSession?: boolean, timeout?: number, request?: Object }): Promise<void>,
     /**
      * 
      * @param payload Message to send: can be any type (usually json) or a collection of messages
@@ -82,7 +101,9 @@ export interface IIoTCClient {
 
     isConnected(): boolean,
 
-    fetchTwin(): Promise<void>
+    fetchTwin(): Promise<void>,
+
+    uploadFile(fileName: string, contentType: string, fileData: any, encoding?: string): Promise<FileUploadResult>
 
 }
 
@@ -93,4 +114,12 @@ export interface IIoTCLogger {
 }
 
 
+export type IoTCCredentials = {
+
+    deviceId: string,
+    modelId: string,
+    patientId: string,
+    deviceKey: string,
+    scopeId: string
+}
 

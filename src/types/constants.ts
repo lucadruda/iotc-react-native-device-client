@@ -56,3 +56,5 @@ export enum DeviceTransport {
     MQTT_WS,
     AMQP_WS
 }
+
+type AnyFn = (...args: any) => any | Promise<any>;

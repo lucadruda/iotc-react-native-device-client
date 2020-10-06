@@ -1,13 +1,17 @@
 // Copyright (c) Luca Druda. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { IIoTCClient, X509, IIoTCLogger, Result, IIoTCProperty, IIoTCCommand, IIoTCCommandResponse, PropertyCallback, CommandCallback } from "./types/interfaces";
-import { IOTC_CONNECT, DPS_DEFAULT_ENDPOINT, IOTC_EVENTS, IOTC_CONNECTION_OK, IOTC_CONNECTION_ERROR, IOTC_LOGGING, DeviceTransport } from "./types/constants";
+import { IIoTCClient, X509, IIoTCLogger, Result, IIoTCProperty, IIoTCCommand, IIoTCCommandResponse, PropertyCallback, CommandCallback, FileRequestMetadata, FileResponseMetadata, FileUploadResult } from "./types/interfaces";
+import { IOTC_CONNECT, DPS_DEFAULT_ENDPOINT, IOTC_EVENTS, IOTC_CONNECTION_OK, IOTC_CONNECTION_ERROR, IOTC_LOGGING } from "./types/constants";
 import { ConsoleLogger } from "./consoleLogger";
 import ProvisioningClient, { HubCredentials } from "./provision";
 import { Client as MqttClient, Message } from 'react-native-paho-mqtt';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid'
+import { parse as base64parse } from 'crypto-js/enc-base64';
+import CryptoJS from "crypto-js";
+import { CryptJsWordArrayToUint8Array, promiseTimeout } from "./utils";
+import CancellationToken from "./cancellationToken";
 
 
 const myStorage: any = {
@@ -23,6 +27,8 @@ const myStorage: any = {
 const TOPIC_TWIN = '$iothub/twin/res';
 const TOPIC_PROPERTIES = '$iothub/twin/PATCH/properties/desired'
 const TOPIC_COMMANDS = '$iothub/methods/POST';
+const TOPIC_C2D = (id: string) => `devices/${id}/messages/devicebound`;
+const HTTPS_API_VERSION = '2018-06-30';
 
 export default class IoTCClient implements IIoTCClient {
     isConnected(): boolean {
@@ -46,6 +52,7 @@ export default class IoTCClient implements IIoTCClient {
     private twin: any;
 
     private retry: number;
+    private receivedDisconnession: boolean;
 
     constructor(readonly id: string, readonly scopeId: string, readonly authenticationType: IOTC_CONNECT | string, readonly options: X509 | string, logger?: IIoTCLogger) {
         if (typeof (authenticationType) == 'string') {
@@ -60,6 +67,7 @@ export default class IoTCClient implements IIoTCClient {
         this.deviceProvisioning = ProvisioningClient.createKeyClient(this.endpoint, id, scopeId, authenticationType as IOTC_CONNECT, options as string);
         this.events = {};
         this.retry = 0;
+        this.receivedDisconnession = false;
     }
 
     setGlobalEndpoint(endpoint: string): void {
@@ -100,12 +108,24 @@ export default class IoTCClient implements IIoTCClient {
     }
 
     async disconnect(): Promise<void> {
+        // immediately flag disconnession, 'onconnectionlost' callbacks won't fire and reconnection won't happen
+        this.receivedDisconnession = true;
+
         await this.logger.log(`Disconnecting client...`);
+        await this.mqttClient?.disconnect();
+        delete this.mqttClient;
+        this.mqttClient = undefined;
+        this.connected = false;
     }
 
-    async connect(cleanSession: boolean = true): Promise<any> {
+    async connect(opts?: { cleanSession?: boolean, timeout?: number, cancellationToken?: CancellationToken }): Promise<any> {
+        const config = { ...{ cleanSession: false, timeout: 30 }, ...opts };
         await this.logger.log(`Connecting client...`);
-        this.credentials = await this.deviceProvisioning.register(this.modelId);
+        config.cancellationToken?.throwIfCancelled('Start connection');
+
+        this.credentials = await promiseTimeout(this.deviceProvisioning.register.bind(this.deviceProvisioning, this.modelId), config.timeout * 1000);
+        config.cancellationToken?.throwIfCancelled('Provisioning');
+
         await this.logger.debug(`Got credentials from DPS\n${JSON.stringify(this.credentials)}`);
         this.mqttClient = new MqttClient({
             uri: `wss://${this.credentials.host}:443/$iothub/websocket`,
@@ -113,7 +133,11 @@ export default class IoTCClient implements IIoTCClient {
             storage: myStorage,
             webSocket: WebSocket,
         });
+        config.cancellationToken?.throwIfCancelled('Hub client init');
         this.mqttClient.on('connectionLost', async (responseObject) => {
+            if (this.receivedDisconnession) { // if disconnect was called from outside, don't try reconnection
+                return;
+            }
             this.connected = false;
             if (responseObject.errorCode !== 0) {
                 await this.logger.debug(responseObject.errorMessage);
@@ -121,15 +145,18 @@ export default class IoTCClient implements IIoTCClient {
             // restart retry
             this.retry = 0;
 
-            await this.clientConnect(cleanSession);
+            await promiseTimeout(this.clientConnect.bind(this, config), config.timeout * 1000);
             await this.subscribe();
         });
 
         this.mqttClient.on('messageReceived', this.onMessageReceived.bind(this));
-        await this.clientConnect(cleanSession);
+        config.cancellationToken?.throwIfCancelled('Connection callbacks applied');
+        await promiseTimeout(this.clientConnect.bind(this, config), config.timeout * 1000);
+        config.cancellationToken?.throwIfCancelled('Hub connection completed');
         await this.subscribe();
+        config.cancellationToken?.throwIfCancelled('Hub topic subscriptions');
         await this.fetchTwin();
-
+        config.cancellationToken?.throwIfCancelled('Fetch Twin');
     }
 
     public async fetchTwin() {
@@ -143,7 +170,7 @@ export default class IoTCClient implements IIoTCClient {
     private async onMessageReceived(message: Message) {
         if (message.destinationName.startsWith(`${TOPIC_TWIN}/200`)) {
             // twin
-            await this.logger.log(`Received twin message: ${message.payloadString}`);
+            await this.logger.debug(`Received twin message: ${message.payloadString}`);
             try {
                 this.twin = JSON.parse(message.payloadString);
                 if (this.twin.desired) {
@@ -176,6 +203,24 @@ export default class IoTCClient implements IIoTCClient {
             }
 
         }
+        else if (message.destinationName.startsWith(TOPIC_C2D(this.id))) {
+            // c2d
+            const regex = new RegExp(`devices/${this.id}/messages/devicebound/([\\S]+)`, 'g')
+            const match = regex.exec(message.destinationName);
+            if (match && match.length === 2) {
+                const data = decodeURIComponent(match[1]).split('&').reduce<{ [x: string]: string }>((obj, item) => {
+                    const kv = item.split('=');
+                    return obj = { ...obj, [kv[0]]: kv[1] };
+                }, {});
+                let cmd: Partial<IIoTCCommand> = {
+                    name: data['method-name'].split(':')[1]
+                }
+                if (message.payloadString) {
+                    cmd['requestPayload'] = message.payloadString;
+                }
+                this.onCommandReceived(cmd)
+            }
+        }
     }
 
 
@@ -199,7 +244,8 @@ export default class IoTCClient implements IIoTCClient {
         }
     }
 
-    private async clientConnect(cleanSession: boolean) {
+    private async clientConnect(config: { cleanSession: boolean, timeout: number }) {
+        const { cleanSession, timeout } = config;
         if (this.retry == 5) {
             throw new Error('No connection after multiple retries');
         }
@@ -212,24 +258,27 @@ export default class IoTCClient implements IIoTCClient {
                 userName: `${this.credentials.host}/${this.id}/?api-version=2019-03-30`,
                 password: this.credentials.password,
                 delay: 5,
-                cleanSession
+                cleanSession,
+                timeout: timeout * 1000
             });
         }
         catch (ex) {
             // retry
             this.retry++;
             await new Promise(r => setTimeout(r, 2000)); // give 2 seconds before retrying
-            await this.clientConnect(cleanSession);
+            await this.clientConnect(config);
         }
         this.connected = true;
-        await this.logger.debug('Reconnection: success');
+        await this.logger.log('Device connected');
     }
 
     private async subscribe() {
         if (!this.mqttClient || !this.connected) {
             return;
         }
-        await this.mqttClient.subscribe(`devices/${this.id}/messages/devicebound/#`);
+        if (this.id) {
+            await this.mqttClient.subscribe(`${TOPIC_C2D(this.id)}/#`);
+        }
         await this.mqttClient.subscribe(`${TOPIC_TWIN}/#`);
         await this.mqttClient.subscribe(`${TOPIC_PROPERTIES}/#`);
         await this.mqttClient.subscribe(`${TOPIC_COMMANDS}/#`);
@@ -265,9 +314,9 @@ export default class IoTCClient implements IIoTCClient {
                     if (wrapped) {
                         await this.sendProperty({
                             [prop]: {
-                                status: 'completed',
-                                message: message ? message : `Property applied`,
-                                desiredVersion: propVersion,
+                                ac: 200,
+                                ad: message ? message : `Property applied`,
+                                av: propVersion,
                                 value
                             }
                         });
@@ -294,9 +343,9 @@ export default class IoTCClient implements IIoTCClient {
         (listener.callback as CommandCallback)({
             name: command.name as string,
             requestPayload: command.requestPayload as any,
-            requestId: command.requestId as string,
+            requestId: command.requestId,
             reply: async function (this: IoTCClient, status: IIoTCCommandResponse, message: string) {
-                await this.ackCommand(command.requestId as string, status);
+                await this.ackCommand(command.requestId, status);
                 await this.sendProperty({
                     [command.name as string]: {
                         value: message
@@ -306,23 +355,83 @@ export default class IoTCClient implements IIoTCClient {
         });
     }
 
-    private async ackCommand(requestId: string, status?: IIoTCCommandResponse) {
+    private async ackCommand(requestId?: string, status?: IIoTCCommandResponse) {
         if (!this.mqttClient || !this.connected) {
             return;
         }
-        let msg = new Message('');
-        let responseStatus = 200;
-        if (status && status == IIoTCCommandResponse.ERROR) {
-            responseStatus = 500;
+        if (requestId) {
+            let msg = new Message('');
+            let responseStatus = 200;
+            if (status && status == IIoTCCommandResponse.ERROR) {
+                responseStatus = 500;
+            }
+            msg.destinationName = `$iothub/methods/res/${responseStatus}/?$rid=${requestId}`;
+            await this.mqttClient.send(msg);
         }
-        msg.destinationName = `$iothub/methods/res/${responseStatus}/?$rid=${requestId}`;
-        await this.mqttClient.send(msg);
+        else {
+            return;
+        }
     }
 
 
     public setLogging(logLevel: string | IOTC_LOGGING) {
         this.logger.setLogLevel(logLevel);
         this.logger.log(`Log level set to ${logLevel}`);
+    }
+
+    public async uploadFile(fileName: string, contentType: string, fileData: any, encoding?: string): Promise<FileUploadResult> {
+        if (!this.mqttClient || !this.connected || !this.credentials) {
+            return { status: -1, errorMessage: 'Client is not connected!' };
+        }
+        let filereq: FileRequestMetadata;
+        //init upload
+        const res = await fetch(`https://${this.credentials.host}/devices/${this.id}/files?api-version=${HTTPS_API_VERSION}`, {
+            method: 'POST',
+            body: JSON.stringify({
+                blobName: fileName
+            }),
+            headers: {
+                Authorization: this.credentials.password,
+                'Content-Type': 'application/json'
+            }
+        });
+        if (res && res.status >= 200 && res.status < 300) {
+            filereq = await res.json();
+            if (encoding && encoding === 'base64') {
+                fileData = CryptJsWordArrayToUint8Array(base64parse.bind(CryptoJS.enc.Base64)(fileData));
+            }
+            const uploadRes = await fetch(`https://${filereq.hostName}/${filereq.containerName}/${filereq.blobName}${filereq.sasToken}`, {
+                method: 'PUT',
+                headers: {
+                    'x-ms-version': '2015-02-21',
+                    'x-ms-date': new Date().toUTCString(),
+                    'Content-Type': contentType,
+                    'Content-Length': `${fileData.length}`,
+                    'x-ms-blob-content-disposition': `attachment; filename="${fileName}"`,
+                    'x-ms-blob-type': 'BlockBlob'
+                },
+                body: fileData.buffer
+            });
+            if (uploadRes) {
+                const notif: FileResponseMetadata = {
+                    correlationId: filereq.correlationId,
+                    isSuccess: uploadRes.status >= 200 && uploadRes.status < 300,
+                    statusCode: uploadRes.status,
+                    statusDescription: uploadRes.statusText
+                };
+                // file has been created
+                await fetch(`https://${this.credentials.host}/devices/${this.id}/files/notifications?api-version=${HTTPS_API_VERSION}`, {
+                    method: 'POST',
+                    body: JSON.stringify(notif),
+                    headers: {
+                        Authorization: this.credentials.password,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                return { status: uploadRes.status, errorMessage: (uploadRes.status >= 200 && uploadRes.status < 300) ? undefined : await uploadRes.text() };
+            }
+        }
+        return { status: res.status, errorMessage: await res.text() };
     }
 
 

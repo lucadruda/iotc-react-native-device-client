@@ -7,7 +7,7 @@ This project provides a react-native compatible version of the IoTCentral device
 ## Getting Started
 
 Install the package and its dependency:
-```
+```bash
 npm install react-native-azure-iotcentral-client react-native-get-random-values
 ```
 _react-native-get-random-values_ provides a polyfill for random generated numbers. This package is mandatory and needs to be imported in project root (index.js, App,js ...);
@@ -19,6 +19,9 @@ _react-native-get-random-values_ provides a polyfill for random generated number
 ```js
 import 'react-native-get-random-values';
 ```
+
+### Types
+Source code is written in Typescript so types are bundled with the package, you don't need to install any additional package
 
 ### Connect
 
@@ -118,11 +121,39 @@ iotc.setModelId('<modelId>');
 ### Manual approval (default)
 By default device auto-approval in IoT Central is disabled, which means that administrator needs to approve the device registration to complete the provisioning process.
 This can be done from explorer page after selecting the device
-![Img](https://github.com/lucadruda/iotc-react-native-device-client/assets/manual_approval.jpg)
+![Img](https://github.com/lucadruda/iotc-react-native-device-client/raw/master/assets/manual_approval.jpg)
 
 
 ### Automatic approval
 To change default behavior, administrator can enable device auto-approval from Device Connection page under the Administration section.
 With automatic approval a device can be provisioned without any manual action and can start sending/receiving data after status changes to "Provisioned"
 
-![Img](https://github.com/lucadruda/iotc-react-native-device-client/assets/auto_approval.jpg)
+![Img](https://github.com/lucadruda/iotc-react-native-device-client/raw/master/assets/auto_approval.jpg)
+
+
+## Sample
+The _sample_ folder contains a sample React Native mobile application to play with the library.
+
+## Instructions
+
+```bash
+cd ./sample
+
+npm install
+
+# for iOS only
+cd ./ios && pod install && cd ..
+
+npm run ios # or 'npm run android'
+```
+
+This sample does not use published npm package but compiled code in the parent folder. In this way you can tweak library code and easily test it through the mobile app.
+Every time library code changes, you need to re-build and re-install package in the mobile app.
+
+```bash
+npm run build
+
+cd ./sample
+
+npm install
+```

@@ -1,18 +1,74 @@
 import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8'
-import { parse as base64parse } from 'crypto-js/enc-base64';
+import HmacSHA256 from 'crypto-js/hmac-sha256'
+import { stringify as base64stringify, parse as base64parse } from 'crypto-js/enc-base64';
+import { IoTCCredentials } from './types/interfaces';
 
-export type IoTCCredentials = {
 
-    deviceId: string,
-    modelId: string,
-    patientId: string,
-    deviceKey: string,
-    scopeId: string
-}
-
-export function DecryptCredentials(value: string, pass: string): IoTCCredentials {
-    const decrypted = AES.decrypt(value, pass);
+export function DecryptCredentials(value: string, pass?: string): IoTCCredentials {
+    const decrypted = pass ? AES.decrypt(value, pass) : value;
     const words = base64parse(decrypted.toString(Utf8));
     return JSON.parse(Utf8.stringify(words));
+}
+
+export function generateHubCredentials(assignedHub: string, registrationId: string, deviceKey: string) {
+    const expiry = Math.floor(Date.now() / 1000) + 21600;
+    const uri = encodeURIComponent(`${assignedHub}/devices/${registrationId}`);
+    const sig = encodeURIComponent(computeKey(deviceKey, `${uri}\n${expiry}`));
+    return {
+        host: assignedHub,
+        password: `SharedAccessSignature sr=${uri}&sig=${sig}&se=${expiry}`
+    }
+}
+
+export function computeKey(key: string, data: string): string {
+    return base64stringify(HmacSHA256(data, base64parse(key)));
+}
+
+export function CryptJsWordArrayToUint8Array(wordArray: any) {
+    const l = wordArray.sigBytes;
+    const words = wordArray.words;
+    const result = new Uint8Array(l);
+    var i = 0 /*dst*/, j = 0 /*src*/;
+    while (true) {
+        // here i is a multiple of 4
+        if (i == l)
+            break;
+        var w = words[j++];
+        result[i++] = (w & 0xff000000) >>> 24;
+        if (i == l)
+            break;
+        result[i++] = (w & 0x00ff0000) >>> 16;
+        if (i == l)
+            break;
+        result[i++] = (w & 0x0000ff00) >>> 8;
+        if (i == l)
+            break;
+        result[i++] = (w & 0x000000ff);
+    }
+    return result;
+}
+
+export async function promiseTimeout<T>(fn: (...args: any[]) => Promise<T>, ms: number): Promise<T> {
+    let id: number;
+    let timeout = new Promise<T>((resolve, reject) => {
+        id = setTimeout(() => {
+            reject('Timed out in ' + ms + 'ms.')
+        }, ms)
+    })
+
+    return Promise.race([
+        fn(),
+        timeout
+    ]).then((result: T) => {
+        clearTimeout(id)
+
+        /**
+         * ... we also need to pass the result back
+         */
+        return Promise.resolve(result)
+    }).catch(err => {
+        clearTimeout(id);
+        return Promise.reject(err);
+    });
 }
