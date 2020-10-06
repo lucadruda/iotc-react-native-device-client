@@ -57,10 +57,4 @@ export enum DeviceTransport {
     AMQP_WS
 }
 
-export class CancellationException implements Error {
-    public name: string;
-
-    constructor(public message: string) {
-        this.name = 'Cancel'
-    }
-}
+type AnyFn = (...args: any) => any | Promise<any>;

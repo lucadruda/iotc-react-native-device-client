@@ -2,7 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 import { IIoTCClient, X509, IIoTCLogger, Result, IIoTCProperty, IIoTCCommand, IIoTCCommandResponse, PropertyCallback, CommandCallback, FileRequestMetadata, FileResponseMetadata, FileUploadResult } from "./types/interfaces";
-import { IOTC_CONNECT, DPS_DEFAULT_ENDPOINT, IOTC_EVENTS, IOTC_CONNECTION_OK, IOTC_CONNECTION_ERROR, IOTC_LOGGING, DeviceTransport, CancellationException } from "./types/constants";
+import { IOTC_CONNECT, DPS_DEFAULT_ENDPOINT, IOTC_EVENTS, IOTC_CONNECTION_OK, IOTC_CONNECTION_ERROR, IOTC_LOGGING } from "./types/constants";
 import { ConsoleLogger } from "./consoleLogger";
 import ProvisioningClient, { HubCredentials } from "./provision";
 import { Client as MqttClient, Message } from 'react-native-paho-mqtt';
@@ -27,6 +27,7 @@ const myStorage: any = {
 const TOPIC_TWIN = '$iothub/twin/res';
 const TOPIC_PROPERTIES = '$iothub/twin/PATCH/properties/desired'
 const TOPIC_COMMANDS = '$iothub/methods/POST';
+const TOPIC_C2D = (id: string) => `devices/${id}/messages/devicebound`;
 const HTTPS_API_VERSION = '2018-06-30';
 
 export default class IoTCClient implements IIoTCClient {
@@ -117,7 +118,7 @@ export default class IoTCClient implements IIoTCClient {
         this.connected = false;
     }
 
-    async connect(opts: { cleanSession?: boolean, timeout?: number, cancellationToken?: CancellationToken }): Promise<any> {
+    async connect(opts?: { cleanSession?: boolean, timeout?: number, cancellationToken?: CancellationToken }): Promise<any> {
         const config = { ...{ cleanSession: false, timeout: 30 }, ...opts };
         await this.logger.log(`Connecting client...`);
         config.cancellationToken?.throwIfCancelled('Start connection');
@@ -202,6 +203,24 @@ export default class IoTCClient implements IIoTCClient {
             }
 
         }
+        else if (message.destinationName.startsWith(TOPIC_C2D(this.id))) {
+            // c2d
+            const regex = new RegExp(`devices/${this.id}/messages/devicebound/([\\S]+)`, 'g')
+            const match = regex.exec(message.destinationName);
+            if (match && match.length === 2) {
+                const data = decodeURIComponent(match[1]).split('&').reduce<{ [x: string]: string }>((obj, item) => {
+                    const kv = item.split('=');
+                    return obj = { ...obj, [kv[0]]: kv[1] };
+                }, {});
+                let cmd: Partial<IIoTCCommand> = {
+                    name: data['method-name'].split(':')[1]
+                }
+                if (message.payloadString) {
+                    cmd['requestPayload'] = message.payloadString;
+                }
+                this.onCommandReceived(cmd)
+            }
+        }
     }
 
 
@@ -250,14 +269,16 @@ export default class IoTCClient implements IIoTCClient {
             await this.clientConnect(config);
         }
         this.connected = true;
-        await this.logger.debug('Reconnection: success');
+        await this.logger.log('Device connected');
     }
 
     private async subscribe() {
         if (!this.mqttClient || !this.connected) {
             return;
         }
-        await this.mqttClient.subscribe(`devices/${this.id}/messages/devicebound/#`);
+        if (this.id) {
+            await this.mqttClient.subscribe(`${TOPIC_C2D(this.id)}/#`);
+        }
         await this.mqttClient.subscribe(`${TOPIC_TWIN}/#`);
         await this.mqttClient.subscribe(`${TOPIC_PROPERTIES}/#`);
         await this.mqttClient.subscribe(`${TOPIC_COMMANDS}/#`);
@@ -322,9 +343,9 @@ export default class IoTCClient implements IIoTCClient {
         (listener.callback as CommandCallback)({
             name: command.name as string,
             requestPayload: command.requestPayload as any,
-            requestId: command.requestId as string,
+            requestId: command.requestId,
             reply: async function (this: IoTCClient, status: IIoTCCommandResponse, message: string) {
-                await this.ackCommand(command.requestId as string, status);
+                await this.ackCommand(command.requestId, status);
                 await this.sendProperty({
                     [command.name as string]: {
                         value: message
@@ -334,17 +355,22 @@ export default class IoTCClient implements IIoTCClient {
         });
     }
 
-    private async ackCommand(requestId: string, status?: IIoTCCommandResponse) {
+    private async ackCommand(requestId?: string, status?: IIoTCCommandResponse) {
         if (!this.mqttClient || !this.connected) {
             return;
         }
-        let msg = new Message('');
-        let responseStatus = 200;
-        if (status && status == IIoTCCommandResponse.ERROR) {
-            responseStatus = 500;
+        if (requestId) {
+            let msg = new Message('');
+            let responseStatus = 200;
+            if (status && status == IIoTCCommandResponse.ERROR) {
+                responseStatus = 500;
+            }
+            msg.destinationName = `$iothub/methods/res/${responseStatus}/?$rid=${requestId}`;
+            await this.mqttClient.send(msg);
         }
-        msg.destinationName = `$iothub/methods/res/${responseStatus}/?$rid=${requestId}`;
-        await this.mqttClient.send(msg);
+        else {
+            return;
+        }
     }
 
 

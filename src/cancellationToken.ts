@@ -1,6 +1,11 @@
-import { CancellationException } from ".";
+export class CancellationException implements Error {
+    public name: string;
 
-type AnyFn = (...args: any) => any | Promise<any>;
+    constructor(public message: string) {
+        this.name = 'Cancel'
+    }
+}
+
 
 export default class CancellationToken {
 

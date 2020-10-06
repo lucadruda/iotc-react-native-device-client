@@ -30,7 +30,7 @@ export enum IIoTCCommandResponse {
 export interface IIoTCCommand {
     name: string,
     requestPayload: any,
-    requestId: string,
+    requestId?: string,
     reply: (status: IIoTCCommandResponse, message: string) => Promise<void>
 }
 export type PropertyCallback = (data: IIoTCProperty) => void | Promise<void>;
@@ -56,6 +56,7 @@ export type FileUploadResult = {
 }
 export interface IIoTCClient {
 
+    readonly id: string,
     /**
      * 
      * @param modelId IoT Central model Id for automatic approval process
@@ -113,5 +114,12 @@ export interface IIoTCLogger {
 }
 
 
+export type IoTCCredentials = {
 
+    deviceId: string,
+    modelId: string,
+    patientId: string,
+    deviceKey: string,
+    scopeId: string
+}
 

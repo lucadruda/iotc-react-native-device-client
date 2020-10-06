@@ -2,15 +2,8 @@ import AES from 'crypto-js/aes';
 import Utf8 from 'crypto-js/enc-utf8'
 import HmacSHA256 from 'crypto-js/hmac-sha256'
 import { stringify as base64stringify, parse as base64parse } from 'crypto-js/enc-base64';
+import { IoTCCredentials } from './types/interfaces';
 
-export type IoTCCredentials = {
-
-    deviceId: string,
-    modelId: string,
-    patientId: string,
-    deviceKey: string,
-    scopeId: string
-}
 
 export function DecryptCredentials(value: string, pass?: string): IoTCCredentials {
     const decrypted = pass ? AES.decrypt(value, pass) : value;
@@ -74,5 +67,8 @@ export async function promiseTimeout<T>(fn: (...args: any[]) => Promise<T>, ms: 
          * ... we also need to pass the result back
          */
         return Promise.resolve(result)
-    })
+    }).catch(err => {
+        clearTimeout(id);
+        return Promise.reject(err);
+    });
 }

@@ -128,11 +128,16 @@ export default class ProvisioningClient {
                 }
             }
             this.mqttClient.on('messageReceived', onMessageReceived.bind(this));
-            await this.clientConnect();
-            await this.mqttClient.subscribe(`${REGISTRATIONTOPIC}/#`);
-            let msg = new Message(JSON.stringify(payload));
-            msg.destinationName = `$dps/registrations/PUT/iotdps-register/?$rid=${this.requestId}`
-            await this.mqttClient.send(msg);
+            try {
+                await this.clientConnect();
+                await this.mqttClient.subscribe(`${REGISTRATIONTOPIC}/#`);
+                let msg = new Message(JSON.stringify(payload));
+                msg.destinationName = `$dps/registrations/PUT/iotdps-register/?$rid=${this.requestId}`
+                await this.mqttClient.send(msg);
+            }
+            catch (ex) {
+                reject(ex);
+            }
         });
 
     }
