@@ -135,7 +135,7 @@ With automatic approval a device can be provisioned without any manual action an
 The _sample_ folder contains a sample React Native mobile application to play with the library.
 
 <p align='center'>
-<img width='300' src='./assets/sample.gif'/>
+<img width='300' src='./assets/sample.gif' style='border:1px solid gray'/>
 </p>
 
 ## Instructions
