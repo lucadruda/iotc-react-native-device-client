@@ -18,7 +18,7 @@ export function DecryptCredentials(
     return JSON.parse(Utf8.stringify(words));
   } catch (e) {
     // try plain even if password is provided otherwise throw
-    const words = base64parse((value as any).toString(Utf8));
+    const words = base64parse(value);
     return JSON.parse(Utf8.stringify(words));
   }
 }
