@@ -1,8 +1,8 @@
 // Copyright (c) Luca Druda. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import { IIoTCClient, X509, IIoTCLogger, Result, IIoTCProperty, IIoTCCommand, IIoTCCommandResponse, PropertyCallback, CommandCallback, FileRequestMetadata, FileResponseMetadata, FileUploadResult } from "./types/interfaces";
-import { IOTC_CONNECT, DPS_DEFAULT_ENDPOINT, IOTC_EVENTS, IOTC_CONNECTION_OK, IOTC_CONNECTION_ERROR, IOTC_LOGGING } from "./types/constants";
+import { IIoTCClient, X509, IIoTCLogger, IIoTCCommand, IIoTCCommandResponse, PropertyCallback, CommandCallback, FileRequestMetadata, FileResponseMetadata, FileUploadResult } from "./types/interfaces";
+import { IOTC_CONNECT, DPS_DEFAULT_ENDPOINT, IOTC_EVENTS, IOTC_LOGGING } from "./types/constants";
 import { ConsoleLogger } from "./consoleLogger";
 import ProvisioningClient, { HubCredentials } from "./provision";
 import { Client as MqttClient, Message } from 'react-native-paho-mqtt';

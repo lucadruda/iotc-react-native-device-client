@@ -6,6 +6,13 @@ import {
   parse as base64parse,
 } from "crypto-js/enc-base64";
 import { IoTCCredentials } from "./types/interfaces";
+import CancellationToken from "./cancellationToken";
+
+export type RegistrationOptions = {
+  encryptionKey?: string;
+  cancellationToken?: CancellationToken;
+};
+
 
 export function DecryptCredentials(
   value: string,
