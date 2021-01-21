@@ -9,10 +9,11 @@
     "android": "react-native run-android",
     "ios": "react-native run-ios",
     "start": "react-native start",
+    "echo": "echo $npm_package_config_iotcclient",
     "test": "jest",
     "lint": "eslint .",
-    "copyLib": "shx cp -r ../src node_modules/$npm_package_config_iotcclient && shx cp -r ../dist node_modules/$npm_package_config_iotcclient && shx cp -r ../package* node_modules/$npm_package_config_iotcclient && shx cp -r ../node_modules node_modules/$npm_package_config_iotcclient",
-    "postinstall": "shx rm -r node_modules/$npm_package_config_iotcclient && mkdir -p node_modules/$npm_package_config_iotcclient && npm run copyLib"
+    "copyLib": "shx cp -r ../src node_modules/react-native-azure-iotcentral-client && shx cp -r ../dist node_modules/react-native-azure-iotcentral-client && shx cp -r ../package* node_modules/react-native-azure-iotcentral-client && shx cp -r ../node_modules node_modules/react-native-azure-iotcentral-client",
+    "postinstall": "shx rm -r node_modules/react-native-azure-iotcentral-client && shx mkdir -p node_modules/react-native-azure-iotcentral-client && npm run copyLib"
   },
   "dependencies": {
     "@react-native-community/checkbox": "^0.5.4",
@@ -20,7 +21,7 @@
     "humanize-string": "^2.1.0",
     "react": "16.13.1",
     "react-native": "0.63.3",
-    "react-native-azure-iotcentral-client": "file:..",
+    "react-native-azure-iotcentral-client": "..",
     "react-native-get-random-values": "^1.5.0"
   },
   "devDependencies": {
