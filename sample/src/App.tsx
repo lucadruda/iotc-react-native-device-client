@@ -7,9 +7,10 @@ import { IoTCCredentials, IoTCClient, IOTC_CONNECT, IIoTCClient, IIoTCLogger, IO
 
 type Setter<T> = React.Dispatch<React.SetStateAction<T>>;
 
-const initialValues: Partial<IoTCCredentials> & { groupKey: string, newDevice: boolean } = {
+const initialValues: Partial<IoTCCredentials> & { connectionString: string, groupKey: string, newDevice: boolean } = {
     scopeId: '',
     deviceId: '',
+    connectionString: '',
     newDevice: false,
     deviceKey: '',
     modelId: '',
@@ -81,15 +82,19 @@ function ConnectForm(props: { setIotc: Setter<IIoTCClient | null>, append: Sette
     const defaultSubmit = 'Connecting ...';
     const [submitting, setSubmitting] = useState(false);
     const [submitMsg, setSubmitMsg] = useState(defaultSubmit);
+    const [isDps, setIsDps] = useState(true);
 
     return (
         <Formik initialValues={initialValues}
             onSubmit={async (values) => {
-                const { deviceId, deviceKey, scopeId, groupKey, modelId } = values;
+                const { deviceId, deviceKey, scopeId, groupKey, modelId, connectionString } = values;
                 setSubmitting(true);
                 try {
-                    if (deviceId && scopeId && (deviceKey || (modelId && groupKey))) {
-                        let iotc: IoTCClient;
+                    let iotc;
+                    if (connectionString) {
+                        iotc = IoTCClient.getFromConnectionString(connectionString);
+                    }
+                    else if (deviceId && scopeId && (deviceKey || (modelId && groupKey))) {
                         if (deviceKey) {
                             iotc = new IoTCClient(deviceId, scopeId, IOTC_CONNECT.DEVICE_KEY, deviceKey, new Logger(append));
                         }
@@ -97,10 +102,13 @@ function ConnectForm(props: { setIotc: Setter<IIoTCClient | null>, append: Sette
                             iotc = new IoTCClient(deviceId, scopeId, IOTC_CONNECT.SYMM_KEY, groupKey, new Logger(append));
                             iotc.setModelId(modelId as string);
                         }
-                        await iotc.connect();
-                        setSubmitting(false);
-                        setIotc(iotc);
                     }
+                    else {
+                        return;
+                    }
+                    await iotc.connect();
+                    setSubmitting(false);
+                    setIotc(iotc);
                 }
                 catch (e) {
                     setSubmitMsg('Error connecting device');
@@ -111,9 +119,21 @@ function ConnectForm(props: { setIotc: Setter<IIoTCClient | null>, append: Sette
                 }
             }}
         >
+
             {({ handleChange, handleBlur, handleSubmit, values, setFieldValue }) => (
                 <KeyboardAvoidingView style={{ flex: 1, paddingHorizontal: 30 }} behavior={'padding'}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <CheckBox disabled={false} value={isDps} onValueChange={() => setIsDps(true)} />
+                        <Text>Use DPS</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <CheckBox disabled={false} value={!isDps} onValueChange={() => setIsDps(false)} />
+                        <Text>Use Connection String</Text>
+                    </View>
                     {(Object.keys(values) as (keyof typeof initialValues)[]).map((k) => {
+                        if (!isDps && k !== 'connectionString') {
+                            return (null)
+                        }
                         if (k === 'newDevice') {
                             return (<View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginEnd: 50 }} key={k}>
                                 <Text>Create new device</Text>

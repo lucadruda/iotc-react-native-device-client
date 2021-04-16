@@ -5,9 +5,10 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "node_modules/.bin/tsc",
+    "build": "npm run format && tsc",
     "clean": "rimraf -r dist",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "format": "prettier --write src/"
   },
   "repository": {
     "type": "git",
@@ -22,8 +23,9 @@
   "devDependencies": {
     "@types/crypto-js": "^3.1.45",
     "@types/uuid": "^7.0.3",
+    "prettier": "^2.2.1",
     "rimraf": "^3.0.2",
-    "typescript": "^3.8.3"
+    "typescript": "^3.9.9"
   },
   "dependencies": {
     "crypto-js": "^3.3.0",
