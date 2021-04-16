@@ -131,4 +131,5 @@ export type IoTCCredentials = {
   patientId: string;
   deviceKey: string;
   scopeId: string;
+  connectionString?: string;
 };
