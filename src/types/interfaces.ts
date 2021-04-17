@@ -125,11 +125,11 @@ export interface IIoTCLogger {
   debug(message: string, tag?: string): void | Promise<void>;
 }
 
-export type IoTCCredentials = {
+export type IoTCCredentials = Partial<{
   deviceId: string;
   modelId: string;
   patientId: string;
   deviceKey: string;
   scopeId: string;
-  connectionString?: string;
-};
+  connectionString: string;
+}>;
