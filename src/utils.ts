@@ -5,7 +5,13 @@ import {
   stringify as base64stringify,
   parse as base64parse,
 } from "crypto-js/enc-base64";
-import { IoTCCredentials } from "./types/interfaces";
+import { IoTCCredentials, HubCredentials } from "./types/interfaces";
+import CancellationToken from "./cancellationToken";
+
+export type RegistrationOptions = {
+  encryptionKey?: string;
+  cancellationToken?: CancellationToken;
+};
 
 export function DecryptCredentials(
   value: string,
@@ -23,11 +29,30 @@ export function DecryptCredentials(
   }
 }
 
+export function parseConnectionString(
+  connectionString: string
+): HubCredentials & { deviceId: string } {
+  const fields = connectionString.split(";");
+  const cStringInfo = fields.reduce<{ [x: string]: string }>((data, field) => {
+    const kv = field.split("=", 2);
+    data[kv[0]] = kv[1];
+    return data;
+  }, {});
+  return {
+    ...generateHubCredentials(
+      cStringInfo["HostName"],
+      cStringInfo["DeviceId"],
+      cStringInfo["SharedAccessKey"]
+    ),
+    deviceId: cStringInfo["DeviceId"],
+  };
+}
+
 export function generateHubCredentials(
   assignedHub: string,
   registrationId: string,
   deviceKey: string
-) {
+): HubCredentials {
   const expiry = Math.floor(Date.now() / 1000) + 21600;
   const uri = encodeURIComponent(`${assignedHub}/devices/${registrationId}`);
   const sig = encodeURIComponent(computeKey(deviceKey, `${uri}\n${expiry}`));
