@@ -97,7 +97,7 @@ export default class IoTCClient implements IIoTCClient {
     if (typeof authenticationType == "string") {
       this.authenticationType =
         IOTC_CONNECT[
-          authenticationType.toUpperCase() as keyof typeof IOTC_CONNECT
+        authenticationType.toUpperCase() as keyof typeof IOTC_CONNECT
         ];
     }
     if (logger) {
@@ -180,12 +180,12 @@ export default class IoTCClient implements IIoTCClient {
     this.credentials = await promiseTimeout(
       this.deviceProvisioning
         ? // use dps
-          this.deviceProvisioning.register.bind(
-            this.deviceProvisioning,
-            this.modelId
-          )
+        this.deviceProvisioning.register.bind(
+          this.deviceProvisioning,
+          this.modelId
+        )
         : // use connection string
-          () => Promise.resolve(this.options as HubCredentials),
+        () => Promise.resolve(this.options as HubCredentials),
       config.timeout * 1000
     );
     config.cancellationToken?.throwIfCancelled("Provisioning");
@@ -262,18 +262,17 @@ export default class IoTCClient implements IIoTCClient {
       this.onPropertiesUpdated(JSON.parse(message.payloadString));
     } else if (message.destinationName.startsWith(TOPIC_COMMANDS)) {
       // commands
-      await this.logger.log(
-        `Received command message: ${message.payloadString}`
-      );
       const match = message.destinationName.match(
         /\$iothub\/methods\/POST\/(.+)\/\?\$rid=(.+)/
       );
       if (match && match.length === 3) {
+        this.logger.log(`Received command ${match[1]}.`);
         let cmd: Partial<IIoTCCommand> = {
           name: match[1],
           requestId: match[2],
         };
         if (message.payloadString) {
+          this.logger.debug(`Command ${match[1]} received with payload '${message.payloadString}'`);
           cmd["requestPayload"] = message.payloadString;
         }
         this.onCommandReceived(cmd);

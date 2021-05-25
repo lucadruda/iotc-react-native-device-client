@@ -1,6 +1,7 @@
 // Copyright (c) Luca Druda. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+import CancellationToken from "../cancellationToken";
 import { IOTC_EVENTS, IOTC_LOGGING } from "./constants";
 
 export class Result {
@@ -75,10 +76,10 @@ export interface IIoTCClient {
   /**
    * Connect the device
    */
-  connect(config?: {
+  connect(copts?: {
     cleanSession?: boolean;
     timeout?: number;
-    request?: Object;
+    cancellationToken?: CancellationToken;
   }): Promise<void>;
   /**
    *
