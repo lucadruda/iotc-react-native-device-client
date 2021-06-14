@@ -97,7 +97,7 @@ export default class IoTCClient implements IIoTCClient {
     if (typeof authenticationType == "string") {
       this.authenticationType =
         IOTC_CONNECT[
-        authenticationType.toUpperCase() as keyof typeof IOTC_CONNECT
+          authenticationType.toUpperCase() as keyof typeof IOTC_CONNECT
         ];
     }
     if (logger) {
@@ -180,12 +180,12 @@ export default class IoTCClient implements IIoTCClient {
     this.credentials = await promiseTimeout(
       this.deviceProvisioning
         ? // use dps
-        this.deviceProvisioning.register.bind(
-          this.deviceProvisioning,
-          this.modelId
-        )
+          this.deviceProvisioning.register.bind(
+            this.deviceProvisioning,
+            this.modelId
+          )
         : // use connection string
-        () => Promise.resolve(this.options as HubCredentials),
+          () => Promise.resolve(this.options as HubCredentials),
       config.timeout * 1000
     );
     config.cancellationToken?.throwIfCancelled("Provisioning");
@@ -272,7 +272,9 @@ export default class IoTCClient implements IIoTCClient {
           requestId: match[2],
         };
         if (message.payloadString) {
-          this.logger.debug(`Command ${match[1]} received with payload '${message.payloadString}'`);
+          this.logger.debug(
+            `Command ${match[1]} received with payload '${message.payloadString}'`
+          );
           cmd["requestPayload"] = message.payloadString;
         }
         this.onCommandReceived(cmd);
@@ -338,7 +340,9 @@ export default class IoTCClient implements IIoTCClient {
     }
     try {
       await this.mqttClient.connect({
-        userName: `${this.credentials.host}/${this.id}/?api-version=2019-03-30`,
+        userName: `${this.credentials.host}/${this.id}/?api-version=2019-03-30${
+          this.modelId ? `&model-id=${this.modelId}` : ""
+        }`,
         password: this.credentials.password,
         delay: 5,
         cleanSession,
@@ -380,35 +384,20 @@ export default class IoTCClient implements IIoTCClient {
       }
       const propVersion = properties["$version"];
       let value = properties[prop];
-      let wrapped = false;
       const valueType = typeof properties[prop];
-      if (
-        valueType !== "string" &&
-        valueType !== "number" &&
-        properties[prop].value
-      ) {
-        value = properties[prop].value;
-        wrapped = true;
-      }
       (listener.callback as PropertyCallback)({
         name: prop,
         value,
         version: propVersion,
         ack: async function (this: IoTCClient, message?: string) {
-          if (wrapped) {
-            await this.sendProperty({
-              [prop]: {
-                ac: 200,
-                ad: message ? message : `Property applied`,
-                av: propVersion,
-                value,
-              },
-            });
-          } else {
-            await this.sendProperty({
-              [prop]: value,
-            });
-          }
+          await this.sendProperty({
+            [prop]: {
+              ac: 200,
+              ad: message ? message : `Property applied`,
+              av: propVersion,
+              value,
+            },
+          });
         }.bind(this),
       });
     });
@@ -432,22 +421,26 @@ export default class IoTCClient implements IIoTCClient {
         status: IIoTCCommandResponse,
         message: string
       ) {
-        await this.ackCommand(command.requestId, status);
-        await this.sendProperty({
-          [command.name as string]: {
-            value: message,
-          },
-        });
+        await this.ackCommand(message, command.requestId, status);
+        // await this.sendProperty({
+        //   [command.name as string]: {
+        //     value: message,
+        //   },
+        // });
       }.bind(this),
     });
   }
 
-  private async ackCommand(requestId?: string, status?: IIoTCCommandResponse) {
+  private async ackCommand(
+    message: string,
+    requestId?: string,
+    status?: IIoTCCommandResponse
+  ) {
     if (!this.mqttClient || !this.connected) {
       return;
     }
     if (requestId) {
-      let msg = new Message("");
+      let msg = new Message(message);
       let responseStatus = 200;
       if (status && status == IIoTCCommandResponse.ERROR) {
         responseStatus = 500;

@@ -164,6 +164,7 @@ export default class ProvisioningClient {
     if (modelId) {
       payload["payload"] = {
         iotcModelId: modelId,
+        modelId: modelId,
       };
     }
     return new Promise<HubCredentials>(async (resolve, reject) => {
