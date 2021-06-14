@@ -1,4 +1,4 @@
-import { IOTC_CONNECT } from "./types/constants";
+import { DPS_API_VERSION, IOTC_CONNECT } from "./types/constants";
 import { HubCredentials, X509 } from "./types/interfaces";
 import "react-native-get-random-values";
 import { v4 as uuidv4 } from "uuid";
@@ -90,7 +90,7 @@ export default class ProvisioningClient {
     }
 
     const clientId = registrationId;
-    this.mqttUser = `${scopeId}/registrations/${registrationId}/api-version=2019-03-31`;
+    this.mqttUser = `${scopeId}/registrations/${registrationId}/api-version=${DPS_API_VERSION}`;
     const resourceUri = `${scopeId}/registrations/${registrationId}`;
     const expiry = Math.floor(Date.now() / 1000) + 21600; // 6 hours
     const signature = encodeURIComponent(

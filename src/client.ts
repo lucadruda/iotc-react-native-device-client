@@ -19,6 +19,7 @@ import {
   DPS_DEFAULT_ENDPOINT,
   IOTC_EVENTS,
   IOTC_LOGGING,
+  IOTHUB_API_VERSION,
 } from "./types/constants";
 import { ConsoleLogger } from "./consoleLogger";
 import ProvisioningClient from "./provision";
@@ -340,7 +341,9 @@ export default class IoTCClient implements IIoTCClient {
     }
     try {
       await this.mqttClient.connect({
-        userName: `${this.credentials.host}/${this.id}/?api-version=2019-03-30${
+        userName: `${this.credentials.host}/${
+          this.id
+        }/?api-version=${IOTHUB_API_VERSION}${
           this.modelId ? `&model-id=${this.modelId}` : ""
         }`,
         password: this.credentials.password,
