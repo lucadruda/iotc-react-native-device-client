@@ -175,7 +175,7 @@ export default class IoTCClient implements IIoTCClient {
     cancellationToken?: CancellationToken;
   }): Promise<any> {
     const config = { ...{ cleanSession: false, timeout: 30 }, ...opts };
-    await this.logger.log(`Connecting client...`);
+    await this.logger.log(`Connecting client ${this.id} ...`);
     config.cancellationToken?.throwIfCancelled("Start connection");
 
     this.credentials = await promiseTimeout(
@@ -388,6 +388,9 @@ export default class IoTCClient implements IIoTCClient {
       const propVersion = properties["$version"];
       let value = properties[prop];
       const valueType = typeof properties[prop];
+      if (valueType === "object" && value.value) {
+        value = value.value;
+      }
       (listener.callback as PropertyCallback)({
         name: prop,
         value,
