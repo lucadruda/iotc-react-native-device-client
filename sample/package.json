@@ -8,6 +8,7 @@
     "start": "react-native start",
     "test": "jest",
     "lint": "eslint .",
+    "preinstall": "npx npm-force-resolutions",
     "copyLib": "shx cp -r ../src node_modules/react-native-azure-iotcentral-client && shx cp -r ../dist node_modules/react-native-azure-iotcentral-client && shx cp -r ../package* node_modules/react-native-azure-iotcentral-client && shx cp -r ../node_modules node_modules/react-native-azure-iotcentral-client",
     "postinstall": "shx rm -r node_modules/react-native-azure-iotcentral-client && shx mkdir -p node_modules/react-native-azure-iotcentral-client && npm run copyLib"
   },
@@ -35,5 +36,8 @@
   },
   "jest": {
     "preset": "react-native"
+  },
+  "resolutions": {
+    "ansi-regex": "5.0.1"
   }
 }
